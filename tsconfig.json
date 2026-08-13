@@ -1,0 +1,7 @@
+{
+  // Solution-style config: no files of its own, just wires up the two real
+  // projects below. This is what makes VS Code route every .ts file to the
+  // right project automatically — see tsconfig.app.json / tsconfig.content.json.
+  "files": [],
+  "references": [{ "path": "./tsconfig.app.json" }, { "path": "./tsconfig.content.json" }]
+}

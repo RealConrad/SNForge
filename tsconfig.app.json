@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "composite": true
+  },
+  "include": ["src/popup/popup.ts", "src/background/background.ts", "src/types/**/*.d.ts"]
+}

@@ -1,0 +1,7 @@
+{
+  // Use the workspace's pinned typescript@7.0.2 (node_modules) for IntelliSense
+  // instead of the version VS Code bundles internally. Without this, editor
+  // errors can silently disagree with what `npm run build` actually does.
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true
+}

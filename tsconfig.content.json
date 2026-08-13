@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    // Content scripts are injected by Chrome as classic (non-module) scripts —
+    // "module": "NodeNext" here would make tsc emit a trailing `export {};`
+    // (since package.json has "type": "module"), which is a syntax error
+    // outside a module context. "commonjs" + moduleDetection "legacy" sidesteps
+    // the package.json-driven auto-detection, so these import/export-free files
+    // compile to plain scripts instead.
+    "module": "commonjs",
+    "moduleDetection": "legacy",
+    "composite": true
+  },
+  "include": ["src/content/palette.ts", "src/types/**/*.d.ts"]
+}

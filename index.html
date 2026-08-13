@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>SNForge</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --sn-bg: #1a1b26;
+        --sn-border: #3b4261;
+        --sn-text: #c0caf5;
+        --sn-accent: #7aa2f7;
+        --sn-selected-bg: #283457;
+        --sn-muted: #565f89;
+      }
+      body {
+        margin: 0;
+        width: 320px;
+        padding: 14px;
+        background: var(--sn-bg);
+        color: var(--sn-text);
+        font: 13px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+      h1 {
+        font-size: 13px;
+        font-weight: 600;
+        margin: 0 0 12px;
+        letter-spacing: 0.02em;
+        color: var(--sn-accent);
+      }
+      h2 {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--sn-muted);
+        margin: 16px 0 8px;
+      }
+      .row {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 6px 0;
+        border-bottom: 1px solid var(--sn-border);
+      }
+      .row:last-child {
+        border-bottom: none;
+      }
+      .label {
+        color: var(--sn-muted);
+      }
+      .value {
+        font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      }
+      .hint {
+        color: var(--sn-muted);
+        font-style: italic;
+        font-size: 12px;
+        margin: 4px 0 0;
+      }
+      ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      li {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 6px 0;
+        border-bottom: 1px solid var(--sn-border);
+      }
+      li:last-child {
+        border-bottom: none;
+      }
+      .name {
+        font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+        color: var(--sn-accent);
+      }
+      .desc {
+        color: var(--sn-muted);
+        font-size: 12px;
+      }
+      #themes {
+        display: flex;
+        gap: 8px;
+      }
+      .swatch {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        padding: 10px 6px;
+        border-radius: 8px;
+        border: 1px solid var(--sn-border);
+        cursor: pointer;
+        font: inherit;
+        color: var(--sn-muted);
+      }
+      .swatch.selected {
+        border-color: var(--sn-accent);
+        color: var(--sn-accent);
+      }
+      .swatch .dot {
+        width: 16px;
+        height: 16px;
+        border-radius: 999px;
+      }
+      .swatch-label {
+        font-size: 11px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>SNForge</h1>
+
+    <h2>Theme</h2>
+    <div id="themes"></div>
+
+    <h2>Palette shortcut</h2>
+    <div class="row">
+      <span class="label">Opens on</span>
+      <span class="value" id="shortcut">…</span>
+    </div>
+    <p class="hint">Custom key bindings coming soon.</p>
+
+    <h2>Commands</h2>
+    <ul id="commands"></ul>
+
+    <script type="module" src="dist/popup/popup.js"></script>
+  </body>
+</html>
