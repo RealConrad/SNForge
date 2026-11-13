@@ -1,0 +1,314 @@
+:host {
+  all: initial;
+  color-scheme: dark;
+  position: fixed;
+  inset: 0;
+  z-index: 2147483646;
+  display: block;
+  background: rgb(5 7 12 / 38%);
+  backdrop-filter: blur(1.5px);
+  font-family: Inter, "Segoe UI", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.palette {
+  --surface: #151620;
+  --surface-raised: #1d1f2c;
+  --text: #c0caf5;
+  --muted: #7982a9;
+  --accent: #7aa2f7;
+  --border: #414868;
+  --success: #9ece6a;
+  position: fixed;
+  top: 12vh;
+  left: 50%;
+  z-index: 1;
+  width: min(720px, calc(100vw - 32px));
+  overflow: hidden;
+  transform: translateX(-50%);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 28px 90px rgb(0 0 0 / 70%), 0 0 0 1px rgb(255 255 255 / 4%);
+  animation: palette-enter 160ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.palette[data-theme="midnight"] {
+  --surface: #0c141e;
+  --surface-raised: #15212f;
+  --text: #d3e2f2;
+  --muted: #8296aa;
+  --accent: #67c8d4;
+  --border: #2b4052;
+  --success: #83d6a5;
+}
+
+.palette[data-theme="obsidian"] {
+  --surface: #14121b;
+  --surface-raised: #201c2b;
+  --text: #e6e1f0;
+  --muted: #9991aa;
+  --accent: #c4a7e7;
+  --border: #443a55;
+  --success: #a6da95;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 58px;
+  padding: 0 22px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(110deg, var(--surface-raised), var(--surface));
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.mark {
+  display: inline-grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--surface);
+  font-size: 12px;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.theme-label {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+select {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+
+select {
+  max-width: 130px;
+  padding: 7px 28px 7px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+
+select:hover,
+select:focus-visible {
+  background: var(--surface-raised);
+  border-color: var(--accent);
+  outline: none;
+}
+
+.output {
+  display: none;
+  max-height: 180px;
+  overflow: auto;
+  padding: 14px 20px 0;
+  color: var(--success);
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+
+.output.has-content {
+  display: block;
+}
+
+.suggestions {
+  max-height: min(360px, 52vh);
+  overflow: auto;
+  margin: 0;
+  padding: 8px 10px 12px;
+  background: var(--surface);
+}
+
+.suggestions-heading {
+  padding: 9px 12px 8px;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.suggestion {
+  display: flex;
+  width: 100%;
+  min-height: 48px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 9px 12px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  transition: background 100ms ease, border-color 100ms ease;
+}
+
+.suggestion:hover,
+.suggestion.is-active {
+  border-color: color-mix(in srgb, var(--accent) 14%, transparent);
+  background: color-mix(in srgb, var(--accent) 9%, var(--surface-raised));
+}
+
+.suggestion-details {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 14px;
+}
+
+.suggestion-name {
+  flex: 0 0 auto;
+  min-width: 78px;
+  color: var(--accent);
+  font-family: "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.suggestion-description {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.suggestion-example {
+  flex: 0 0 auto;
+  max-width: 42%;
+  overflow: hidden;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+  font-size: 10px;
+}
+
+.suggestions-empty {
+  padding: 12px 9px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.prompt-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 72px;
+  margin: 0;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-raised);
+}
+
+.search-icon {
+  position: relative;
+  flex: 0 0 17px;
+  width: 17px;
+  height: 17px;
+  border: 2px solid var(--muted);
+  border-radius: 50%;
+  opacity: 0.9;
+}
+
+.search-icon::after {
+  position: absolute;
+  right: -5px;
+  bottom: -3px;
+  width: 7px;
+  height: 2px;
+  transform: rotate(45deg);
+  border-radius: 2px;
+  background: var(--muted);
+  content: "";
+}
+
+input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 16px;
+}
+
+input::placeholder {
+  color: var(--muted);
+  opacity: 0.8;
+}
+
+@media (max-width: 560px) {
+  .topbar {
+    padding: 0 16px;
+  }
+
+  .prompt-row {
+    min-height: 64px;
+    padding: 0 18px;
+  }
+
+  .suggestion {
+    gap: 8px;
+    padding-right: 8px;
+    padding-left: 8px;
+  }
+
+  .suggestion-name {
+    min-width: auto;
+  }
+
+  .suggestion-example {
+    display: none;
+  }
+
+  .suggestion-details {
+    gap: 8px;
+  }
+}
+
+@keyframes palette-enter {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -6px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .palette {
+    animation: none;
+  }
+}

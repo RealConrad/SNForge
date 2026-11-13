@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "SNForge",
+  "version": "0.1.0",
+  "description": "Keyboard command palette for ServiceNow admins.",
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://*.service-now.com/*"],
+      "js": ["bridge.js"],
+      "world": "MAIN",
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://*.service-now.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "permissions": ["storage", "scripting"],
+  "host_permissions": ["https://*.service-now.com/*"],
+  "commands": {
+    "toggle-palette": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+Space"
+      },
+      "description": "Open or close the SNForge command palette"
+    }
+  }
+}
