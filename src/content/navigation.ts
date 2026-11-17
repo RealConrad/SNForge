@@ -1,3 +1,4 @@
+import { isNextExperiencePath } from '../commands/urls';
 import type { TabOpenMessage } from '../shared/messages';
 
 /** Navigates the current tab. */
@@ -13,5 +14,5 @@ export async function openTab(url: string, active = true): Promise<void> {
 
 /** True when the page runs inside the Next Experience (Polaris) shell. */
 export function isNextExperience(): boolean {
-  return window.location.pathname.startsWith('/now/');
+  return isNextExperiencePath(window.location.pathname);
 }

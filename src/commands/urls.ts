@@ -16,6 +16,10 @@ export function classicPageUrl(path: string, { origin, nextExperience }: UrlOpti
   return new URL(target, origin).toString();
 }
 
-export function hasNavigation(path: string): boolean {
-  return path.startsWith('/now/nav/ui/');
+/**
+ * True when `path` is a Next Experience page (the shell, workspaces, Workflow Studio, …).
+ * The single definition: content/navigation.ts and commands both use it.
+ */
+export function isNextExperiencePath(path: string): boolean {
+  return path.startsWith('/now/');
 }

@@ -28,6 +28,7 @@ export const MAX_SUGGESTIONS = 6;
  * Each entry is exactly what you would type: a table name or a ":command".
  */
 export const SUGGESTED_INPUTS: readonly string[] = [
+  ':fd',
   ':nav',
   ':help',
 ];
