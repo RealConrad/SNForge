@@ -4,7 +4,6 @@ import { createSnApi } from '../shared/sn-api';
 import { BridgeTimeoutError, getSession } from './bridge-client';
 
 let accessPromise: Promise<boolean> | undefined;
-let grantedSession: SessionInfo | undefined;
 
 export function hasRequiredRoles(roles: readonly string[]): boolean {
   const has = (role: string): boolean => roles.includes(role);
@@ -27,19 +26,15 @@ async function checkAccess(): Promise<boolean> {
     return false;
   }
 
-  let allowed = hasRequiredRoles(session.roles);
-  if (!allowed) {
-    try {
-      allowed = hasRequiredRoles([...session.roles, ...await lookupRoles(session)]);
-    } catch {
-      allowed = false;
-    }
+  if (hasRequiredRoles(session.roles)) {
+    return true;
   }
 
-  if (allowed) {
-    grantedSession = session;
+  try {
+    return hasRequiredRoles([...session.roles, ...await lookupRoles(session)]);
+  } catch {
+    return false;
   }
-  return allowed;
 }
 
 /**
@@ -55,9 +50,4 @@ export function isAccessAllowed(): Promise<boolean> {
     return false;
   });
   return accessPromise;
-}
-
-/** The session of the user who passed the access check (undefined before that). */
-export function getGrantedSession(): SessionInfo | undefined {
-  return grantedSession;
 }

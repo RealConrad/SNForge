@@ -9,11 +9,10 @@ import {
   type TableShortcut,
 } from '../../commands/table-shortcut';
 import type { Command, CommandContext, OutputKind } from '../../commands/types';
-import { MAX_SUGGESTIONS } from '../../config';
+import { MAX_SUGGESTIONS, SUGGESTED_INPUTS } from '../../config';
 import { el } from '../../shared/dom';
 import { getSavedTheme, onThemeChanged } from '../../shared/theme';
 import themes from '../../shared/themes.css';
-import { getGrantedSession } from '../access';
 import { isNextExperience, navigate, openTab } from '../navigation';
 import styles from './palette.css';
 
@@ -106,24 +105,16 @@ function runTableShortcut(shortcut: TableShortcut): void {
 }
 
 /** Cancels any previous run and creates a fresh context for a new one. */
-function startRun(): CommandContext | undefined {
-  const session = getGrantedSession();
-  if (!session) {
-    showOutput('Session unavailable. Reload the page and try again.', 'error');
-    return undefined;
-  }
+function startRun(): CommandContext {
   currentRun?.abort();
   currentRun = new AbortController();
-  return createCommandContext(session, commandUi, currentRun.signal);
+  return createCommandContext(commandUi, currentRun.signal);
 }
 
 function runCommand(input: string): void {
   clearOutput();
   resetInput();
-  const ctx = startRun();
-  if (ctx) {
-    void runCommandInput(input, ctx);
-  }
+  void runCommandInput(input, startRun());
 }
 
 function completeCommand(command: Command): void {
@@ -161,10 +152,37 @@ function commandItem(command: Command, typedName: string, input: string): Palett
   };
 }
 
+/** The item a suggested input ("incident", ":nav") stands for, as if it had been typed. */
+function suggestedItem(text: string): PaletteItem | undefined {
+  if (text.startsWith(':')) {
+    const name = text.slice(1).toLowerCase();
+    const command = findCommand(name);
+    return command ? commandItem(command, name, text) : undefined;
+  }
+  const shortcut = parseTableShortcut(text);
+  return shortcut ? tableItem(shortcut) : undefined;
+}
+
+/**
+ * Suggested inputs containing what was typed (all of them for empty input).
+ * Typing in uppercase ("INC") keeps the new-tab meaning by uppercasing the suggestion.
+ */
+function suggestedItems(trimmed: string): PaletteItem[] {
+  if (/\s/.test(trimmed)) {
+    return []; // arguments typed: the user is past picking a suggestion
+  }
+  const needle = trimmed.toLowerCase();
+  const newTab = trimmed !== needle;
+
+  return SUGGESTED_INPUTS.filter((text) => text.toLowerCase().includes(needle))
+    .map((text) => suggestedItem(newTab ? text.toUpperCase() : text))
+    .filter((item): item is PaletteItem => item !== undefined);
+}
+
 function buildItems(input: string): PaletteItem[] {
   const trimmed = input.trim();
   if (!trimmed) {
-    return [];
+    return suggestedItems('').slice(0, MAX_SUGGESTIONS);
   }
 
   const typedName = trimmed.replace(/^:/, '').split(/\s+/, 1)[0].toLowerCase();
@@ -182,6 +200,8 @@ function buildItems(input: string): PaletteItem[] {
     items.push(tableItem(shortcut));
   }
 
+  items.push(...suggestedItems(trimmed));
+
   // Partial command names are only suggested after ":", to keep the list short.
   if (isCommandInput) {
     for (const command of matchCommands(typedName)) {
@@ -191,7 +211,13 @@ function buildItems(input: string): PaletteItem[] {
     }
   }
 
-  return items.slice(0, MAX_SUGGESTIONS);
+  return uniqueByTitle(items).slice(0, MAX_SUGGESTIONS);
+}
+
+/** Suggestions overlap with the typed shortcut / command matches; keep the first of each. */
+function uniqueByTitle(items: PaletteItem[]): PaletteItem[] {
+  const seen = new Set<string>();
+  return items.filter((item) => !seen.has(item.title) && seen.add(item.title));
 }
 
 // ---------- Rendering ----------
@@ -233,7 +259,10 @@ function createOption(item: PaletteItem, index: number): HTMLButtonElement {
   return option;
 }
 
-/** Rebuilds the suggestion list for the current input. Empty input shows nothing. */
+/**
+ * Rebuilds the suggestion list for the current input. Empty input shows the suggested
+ * inputs with nothing highlighted, so Enter on an empty prompt does nothing by accident.
+ */
 function renderSuggestions(): void {
   if (!ui) {
     return;
@@ -250,7 +279,7 @@ function renderSuggestions(): void {
   } else {
     ui.list.replaceChildren();
   }
-  setActive(state.options.length ? 0 : -1);
+  setActive(state.options.length && input.trim() ? 0 : -1);
 }
 
 /** Moves the highlight without rebuilding the list. */
@@ -277,9 +306,12 @@ function setActive(index: number): void {
 
 function moveActive(direction: 1 | -1): void {
   const count = state.options.length;
-  if (count > 0) {
-    setActive((state.active + direction + count) % count);
+  if (count === 0) {
+    return;
   }
+  // Nothing highlighted yet: ↓ starts at the top, ↑ at the bottom.
+  const from = state.active < 0 ? (direction === 1 ? -1 : 0) : state.active;
+  setActive((from + direction + count) % count);
 }
 
 // ---------- Keyboard & pointer ----------
@@ -428,8 +460,10 @@ export function togglePalette(): void {
   if (!ui) {
     registerBuiltins();
     ui = createPalette();
-    renderSuggestions();
   }
+  // Every open starts fresh: no leftover output or input from the last session.
+  clearOutput();
+  resetInput();
   open = true;
   ui.host.style.display = 'block';
   ui.input.focus();

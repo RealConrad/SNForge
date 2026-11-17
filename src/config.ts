@@ -22,3 +22,12 @@ export const BRIDGE_TIMEOUT_MS = 2_000;
 
 /** Maximum number of command suggestions shown in the palette. */
 export const MAX_SUGGESTIONS = 6;
+
+/**
+ * Suggested inputs: all shown when the palette input is empty, filtered as you type.
+ * Each entry is exactly what you would type: a table name or a ":command".
+ */
+export const SUGGESTED_INPUTS: readonly string[] = [
+  ':nav',
+  ':help',
+];

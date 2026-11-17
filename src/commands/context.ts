@@ -1,20 +1,11 @@
 import { isNextExperience, navigate, openTab } from '../content/navigation';
-import type { SessionInfo } from '../shared/messages';
-import { createSnApi } from '../shared/sn-api';
 import type { CommandContext } from './types';
 
 /** Builds the context for one command run. The palette supplies UI callbacks and the abort signal. */
-export function createCommandContext(
-  session: SessionInfo,
-  ui: CommandContext['ui'],
-  signal: AbortSignal,
-): CommandContext {
-  const instanceUrl = window.location.origin;
+export function createCommandContext(ui: CommandContext['ui'], signal: AbortSignal): CommandContext {
   return {
-    instanceUrl,
-    urlOptions: { origin: instanceUrl, nextExperience: isNextExperience() },
-    session,
-    api: createSnApi(session.token),
+    urlOptions: { origin: window.location.origin, nextExperience: isNextExperience() },
+    currentPath: window.location.pathname + window.location.search,
     signal,
     ui,
     openTab,

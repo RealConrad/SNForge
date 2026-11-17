@@ -15,3 +15,7 @@ export function classicPageUrl(path: string, { origin, nextExperience }: UrlOpti
     : path;
   return new URL(target, origin).toString();
 }
+
+export function hasNavigation(path: string): boolean {
+  return path.startsWith('/now/nav/ui/');
+}
