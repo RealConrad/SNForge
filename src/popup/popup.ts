@@ -1,4 +1,4 @@
-import { THEMES, type ThemeId } from '../config';
+import { DOCS_URL, THEMES, type ThemeId } from '../config';
 import { el } from '../shared/dom';
 import { TOGGLE_PALETTE_COMMAND } from '../shared/messages';
 import { getSavedTheme, isThemeId, saveTheme } from '../shared/theme';
@@ -67,6 +67,9 @@ async function init(): Promise<void> {
   required<HTMLElement>('#version').textContent = `v${chrome.runtime.getManifest().version}`;
   required<HTMLButtonElement>('#change-shortcut').addEventListener('click', () => {
     void chrome.tabs.create({ url: SHORTCUTS_URL });
+  });
+  required<HTMLButtonElement>('#open-docs').addEventListener('click', () => {
+    void chrome.tabs.create({ url: DOCS_URL });
   });
 
   const theme = await getSavedTheme();

@@ -5,7 +5,13 @@ export const TOGGLE_PALETTE_COMMAND = 'toggle-palette';
 export const BRIDGE_REQUEST_EVENT = 'snforge:req';
 export const BRIDGE_RESPONSE_EVENT = 'snforge:res';
 
-export type RuntimeMessage = { type: 'palette/toggle' };
+/** Service worker → content script. */
+export type PaletteToggleMessage = { type: 'palette/toggle' };
+
+/** Content script → service worker: open `url` in a new tab next to the sender's. */
+export type TabOpenMessage = { type: 'tab/open'; url: string; active?: boolean };
+
+export type RuntimeMessage = PaletteToggleMessage | TabOpenMessage;
 
 export interface SessionInfo {
   userName: string;
@@ -30,8 +36,15 @@ function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === 'string');
 }
 
-export function isRuntimeMessage(value: unknown): value is RuntimeMessage {
+export function isPaletteToggleMessage(value: unknown): value is PaletteToggleMessage {
   return isRecord(value) && value.type === 'palette/toggle';
+}
+
+export function isTabOpenMessage(value: unknown): value is TabOpenMessage {
+  return isRecord(value) &&
+    value.type === 'tab/open' &&
+    typeof value.url === 'string' &&
+    (value.active === undefined || typeof value.active === 'boolean');
 }
 
 export function isBridgeRequest(value: unknown): value is BridgeRequest {

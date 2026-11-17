@@ -14,6 +14,9 @@ export type ThemeId = keyof typeof THEMES;
 export const DEFAULT_THEME: ThemeId = 'tokyo';
 export const THEME_STORAGE_KEY = 'snforge.theme';
 
+/** User documentation, opened by :help and the popup. */
+export const DOCS_URL = 'https://github.com/RealConrad/SNForge#readme';
+
 /** How long the content script waits for the page bridge to answer. */
 export const BRIDGE_TIMEOUT_MS = 2_000;
 

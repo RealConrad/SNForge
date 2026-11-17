@@ -1,4 +1,5 @@
-import { TOGGLE_PALETTE_COMMAND, type RuntimeMessage } from '../shared/messages';
+import { DOCS_URL } from '../config';
+import { TOGGLE_PALETTE_COMMAND, isTabOpenMessage, type PaletteToggleMessage } from '../shared/messages';
 
 function isServiceNowUrl(value: string | undefined): boolean {
   if (!value) {
@@ -20,7 +21,7 @@ async function injectScripts(tabId: number): Promise<void> {
 }
 
 async function toggleInTab(tabId: number): Promise<void> {
-  const message: RuntimeMessage = { type: 'palette/toggle' };
+  const message: PaletteToggleMessage = { type: 'palette/toggle' };
   try {
     await chrome.tabs.sendMessage(tabId, message);
     return;
@@ -42,4 +43,30 @@ chrome.commands.onCommand.addListener((command, tab) => {
   }
 
   void toggleInTab(tab.id);
+});
+
+/** True when `url` is on the same ServiceNow origin as the tab that asked for it. */
+function isSameInstance(url: string, senderUrl: string | undefined): boolean {
+  if (!isServiceNowUrl(url) || !isServiceNowUrl(senderUrl)) {
+    return false;
+  }
+  return new URL(url).origin === new URL(senderUrl ?? '').origin;
+}
+
+/** Content scripts may open their own instance, plus the docs page. Nothing else. */
+function isAllowedTabUrl(url: string, senderUrl: string | undefined): boolean {
+  return url === DOCS_URL || isSameInstance(url, senderUrl);
+}
+
+chrome.runtime.onMessage.addListener((message: unknown, sender) => {
+  if (!isTabOpenMessage(message) || !sender.tab || !isAllowedTabUrl(message.url, sender.tab.url)) {
+    return;
+  }
+
+  void chrome.tabs.create({
+    url: message.url,
+    active: message.active ?? true,
+    index: sender.tab.index + 1,
+    windowId: sender.tab.windowId,
+  });
 });

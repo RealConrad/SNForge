@@ -1,8 +1,10 @@
 import { ACCESS } from '../config';
 import type { SessionInfo } from '../shared/messages';
+import { createSnApi } from '../shared/sn-api';
 import { BridgeTimeoutError, getSession } from './bridge-client';
 
 let accessPromise: Promise<boolean> | undefined;
+let grantedSession: SessionInfo | undefined;
 
 export function hasRequiredRoles(roles: readonly string[]): boolean {
   const has = (role: string): boolean => roles.includes(role);
@@ -11,34 +13,12 @@ export function hasRequiredRoles(roles: readonly string[]): boolean {
 
 /** Fallback: read the user's roles from sys_user_has_role. */
 async function lookupRoles(session: SessionInfo): Promise<string[]> {
-  const params = new URLSearchParams({
-    sysparm_query: `user=${session.userSysId}^role.nameIN${ACCESS.requiredRoles.join(',')}`,
-    sysparm_fields: 'role.name',
+  const records = await createSnApi(session.token).getRecords('sys_user_has_role', {
+    query: `user=${session.userSysId}^role.nameIN${ACCESS.requiredRoles.join(',')}`,
+    fields: ['role.name'],
   });
-
-  const response = await fetch(`/api/now/table/sys_user_has_role?${params}`, {
-    headers: {
-      Accept: 'application/json',
-      'X-UserToken': session.token,
-    },
-    credentials: 'same-origin',
-  });
-  if (!response.ok) {
-    return [];
-  }
-
-  const payload: unknown = await response.json();
-  if (typeof payload !== 'object' || payload === null || !('result' in payload) || !Array.isArray(payload.result)) {
-    return [];
-  }
-
   // Dot-walked fields come back flat: { "role.name": "admin" }.
-  return payload.result.flatMap((record: unknown) => {
-    if (typeof record === 'object' && record !== null && 'role.name' in record && typeof record['role.name'] === 'string') {
-      return [record['role.name']];
-    }
-    return [];
-  });
+  return records.flatMap((record) => (typeof record['role.name'] === 'string' ? [record['role.name']] : []));
 }
 
 async function checkAccess(): Promise<boolean> {
@@ -46,20 +26,26 @@ async function checkAccess(): Promise<boolean> {
   if (!session) {
     return false;
   }
-  if (hasRequiredRoles(session.roles)) {
-    return true;
+
+  let allowed = hasRequiredRoles(session.roles);
+  if (!allowed) {
+    try {
+      allowed = hasRequiredRoles([...session.roles, ...await lookupRoles(session)]);
+    } catch {
+      allowed = false;
+    }
   }
 
-  try {
-    return hasRequiredRoles([...session.roles, ...await lookupRoles(session)]);
-  } catch {
-    return false;
+  if (allowed) {
+    grantedSession = session;
   }
+  return allowed;
 }
 
 /**
- * Resolves whether the current user may use SNForge. The answer is cached for the
- * page lifetime, except when the bridge timed out — then the next call retries.
+ * Resolves whether the current user may use SNForge. This is the ONLY permission check:
+ * once it passes, every palette feature is available. The answer is cached for the page
+ * lifetime, except when the bridge timed out — then the next call retries.
  */
 export function isAccessAllowed(): Promise<boolean> {
   accessPromise ??= checkAccess().catch((error: unknown) => {
@@ -69,4 +55,9 @@ export function isAccessAllowed(): Promise<boolean> {
     return false;
   });
   return accessPromise;
+}
+
+/** The session of the user who passed the access check (undefined before that). */
+export function getGrantedSession(): SessionInfo | undefined {
+  return grantedSession;
 }
