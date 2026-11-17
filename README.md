@@ -42,6 +42,9 @@ Commands start with `:`.
 | Command | Description |
 |---|---|
 | `:help` (`:docs`) | Open this page |
+| `:nav` (`:navbar`, `:shell`, `:polaris`) | Reload the current classic page inside the Next Experience navigation |
+| `:fd` (`:flow`, `:flowdesigner`) | Open Flow Designer in a new tab |
+| `:st` (`:studio`) | Open ServiceNow Studio in a new tab |
 
 ## Themes
 
@@ -58,5 +61,3 @@ npm run typecheck
 ```
 
 Load `dist/` at `chrome://extensions` with Developer mode on ("Load unpacked").
-See [CLAUDE.md](CLAUDE.md) for architecture rules and [CODE-GUIDE.md](CODE-GUIDE.md)
-for a walkthrough of the code.
