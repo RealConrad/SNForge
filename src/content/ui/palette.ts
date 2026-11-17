@@ -1,14 +1,8 @@
+import { MAX_SUGGESTIONS } from '../../config';
+import { el } from '../../shared/dom';
 import { getSavedTheme, onThemeChanged } from '../../shared/theme';
 import themes from '../../shared/themes.css';
 import styles from './palette.css';
-
-let host: HTMLDivElement | undefined;
-let panel: HTMLElement | undefined;
-let commandInput: HTMLInputElement | undefined;
-let output: HTMLDivElement | undefined;
-let suggestionsList: HTMLDivElement | undefined;
-let activeSuggestionIndex = 0;
-let open = false;
 
 interface Suggestion {
   name: string;
@@ -18,137 +12,206 @@ interface Suggestion {
 
 // TODO: replace with suggestions from the command registry.
 const SUGGESTIONS: Suggestion[] = [];
-const MAX_SUGGESTIONS = 6;
 
-function appendOutput(text: string): void {
-  if (!output) {
-    return;
-  }
-  output.textContent = text;
-  output.classList.add('has-content');
+interface PaletteUi {
+  host: HTMLDivElement;
+  panel: HTMLElement;
+  input: HTMLInputElement;
+  output: HTMLDivElement;
+  list: HTMLDivElement;
 }
 
-function getQuery(): string {
-  return commandInput?.value.trim().replace(/^:/, '').toLowerCase() ?? '';
+interface SuggestionState {
+  matches: Suggestion[];
+  options: HTMLButtonElement[];
+  active: number;
 }
 
-function getSuggestionMatches(): Suggestion[] {
-  const query = getQuery().split(/\s+/, 1)[0];
-  return SUGGESTIONS.filter((command) => {
-    return !query || `${command.name} ${command.description}`.toLowerCase().includes(query);
-  }).slice(0, MAX_SUGGESTIONS);
+let ui: PaletteUi | undefined;
+let open = false;
+const state: SuggestionState = { matches: [], options: [], active: -1 };
+
+// ---------- Suggestions ----------
+
+function normalizeInput(value: string): string {
+  return value.trim().replace(/^:/, '').toLowerCase();
+}
+
+function findMatches(query: string): Suggestion[] {
+  const term = query.split(/\s+/, 1)[0];
+  return SUGGESTIONS
+    .filter((command) => !term || `${command.name} ${command.description}`.toLowerCase().includes(term))
+    .slice(0, MAX_SUGGESTIONS);
 }
 
 function createKbd(label: string): HTMLElement {
-  const kbd = document.createElement('kbd');
-  kbd.textContent = label;
-  return kbd;
+  return el('kbd', undefined, label);
 }
 
-function renderEmptyState(list: HTMLDivElement, query: string): void {
-  const empty = document.createElement('div');
-  empty.className = 'suggestions-empty';
-  const title = document.createElement('span');
-  const hint = document.createElement('span');
-  hint.className = 'suggestions-empty-hint';
-  if (query) {
-    title.textContent = `No commands match “${query}”`;
-    hint.textContent = 'Press Enter to run it anyway';
-  } else {
-    title.textContent = 'No commands registered yet';
-    hint.textContent = 'Type a command and press Enter';
-  }
-  empty.append(title, hint);
-  list.append(empty);
+function createEmptyState(query: string): HTMLElement {
+  const empty = el('div', 'suggestions-empty');
+  empty.append(
+    el('span', undefined, query ? `No commands match “${query}”` : 'No commands registered yet'),
+    el('span', 'suggestions-empty-hint', query ? 'Press Enter to run it anyway' : 'Type a command and press Enter'),
+  );
+  return empty;
 }
 
+function createOption(command: Suggestion, index: number): HTMLButtonElement {
+  const option = el('button', 'suggestion');
+  option.type = 'button';
+  option.tabIndex = -1;
+  option.id = `snforge-suggestion-${index}`;
+  option.setAttribute('role', 'option');
+
+  const icon = el('span', 'suggestion-icon', command.name.charAt(0).toUpperCase());
+  icon.setAttribute('aria-hidden', 'true');
+
+  const details = el('span', 'suggestion-details');
+  details.append(
+    el('span', 'suggestion-name', `:${command.name}`),
+    el('span', 'suggestion-description', command.description),
+  );
+
+  const enter = createKbd('↵');
+  enter.classList.add('suggestion-enter');
+
+  option.append(icon, details, el('span', 'suggestion-example', command.example), enter);
+  option.addEventListener('mousemove', () => {
+    if (state.active !== index) {
+      setActive(index);
+    }
+  });
+  option.addEventListener('click', () => acceptSuggestion(command));
+  return option;
+}
+
+/** Rebuilds the suggestion list for the current input. */
 function renderSuggestions(): void {
-  if (!suggestionsList || !commandInput) {
+  if (!ui) {
     return;
   }
 
-  const query = getQuery();
-  const matches = getSuggestionMatches();
+  const query = normalizeInput(ui.input.value);
+  state.matches = findMatches(query);
+  state.options = state.matches.map(createOption);
 
-  suggestionsList.replaceChildren();
-  const heading = document.createElement('div');
-  heading.className = 'suggestions-heading';
-  heading.textContent = query ? 'Matching commands' : 'Suggested commands';
-  suggestionsList.append(heading);
+  const heading = el('div', 'suggestions-heading', query ? 'Matching commands' : 'Suggested commands');
+  ui.list.replaceChildren(heading, ...(state.options.length ? state.options : [createEmptyState(query)]));
+  setActive(state.options.length ? 0 : -1);
+}
 
-  if (matches.length === 0) {
-    commandInput.removeAttribute('aria-activedescendant');
-    renderEmptyState(suggestionsList, query);
-    activeSuggestionIndex = -1;
+/** Moves the highlight without rebuilding the list. */
+function setActive(index: number): void {
+  if (!ui) {
     return;
   }
 
-  activeSuggestionIndex = Math.min(Math.max(activeSuggestionIndex, 0), matches.length - 1);
-  commandInput.setAttribute('aria-activedescendant', `command-suggestion-${matches[activeSuggestionIndex].name}`);
-
-  matches.forEach((command, index) => {
-    const isActive = index === activeSuggestionIndex;
-    const option = document.createElement('button');
-    option.type = 'button';
-    option.tabIndex = -1;
-    option.className = 'suggestion';
-    option.id = `command-suggestion-${command.name}`;
+  state.active = index;
+  state.options.forEach((option, optionIndex) => {
+    const isActive = optionIndex === index;
     option.classList.toggle('is-active', isActive);
-    option.setAttribute('role', 'option');
     option.setAttribute('aria-selected', String(isActive));
-
-    const icon = document.createElement('span');
-    icon.className = 'suggestion-icon';
-    icon.setAttribute('aria-hidden', 'true');
-    icon.textContent = command.name.charAt(0).toUpperCase();
-
-    const details = document.createElement('span');
-    details.className = 'suggestion-details';
-    const name = document.createElement('span');
-    name.className = 'suggestion-name';
-    name.textContent = `:${command.name}`;
-    const description = document.createElement('span');
-    description.className = 'suggestion-description';
-    description.textContent = command.description;
-    details.append(name, description);
-
-    const example = document.createElement('span');
-    example.className = 'suggestion-example';
-    example.textContent = command.example;
-
-    const enter = createKbd('↵');
-    enter.classList.add('suggestion-enter');
-
-    option.append(icon, details, example, enter);
-    option.addEventListener('mousemove', () => {
-      if (activeSuggestionIndex !== index) {
-        activeSuggestionIndex = index;
-        renderSuggestions();
-      }
-    });
-    option.addEventListener('click', () => selectSuggestion(command.name));
-    suggestionsList?.append(option);
   });
 
-  suggestionsList.querySelector('.is-active')?.scrollIntoView({ block: 'nearest' });
+  const activeOption = state.options[index];
+  if (activeOption) {
+    ui.input.setAttribute('aria-activedescendant', activeOption.id);
+    activeOption.scrollIntoView({ block: 'nearest' });
+  } else {
+    ui.input.removeAttribute('aria-activedescendant');
+  }
 }
 
-function selectSuggestion(name: string): void {
-  if (!commandInput) {
+function moveActive(direction: 1 | -1): void {
+  const count = state.options.length;
+  if (count > 0) {
+    setActive((state.active + direction + count) % count);
+  }
+}
+
+function acceptSuggestion(command: Suggestion): void {
+  if (!ui) {
     return;
   }
-  commandInput.value = `${name} `;
-  commandInput.focus();
+  ui.input.value = `${command.name} `;
+  ui.input.focus();
   renderSuggestions();
 }
 
-function onDocumentKeyDown(event: KeyboardEvent): void {
-  if (!open || !host) {
+// ---------- Output & commands ----------
+
+function showOutput(text: string): void {
+  if (!ui) {
+    return;
+  }
+  ui.output.textContent = text;
+  ui.output.classList.add('has-content');
+}
+
+function submit(): void {
+  if (!ui) {
     return;
   }
 
-  const isInsidePalette = event.composedPath().includes(host);
-  if (isInsidePalette) {
+  const value = ui.input.value.trim();
+  if (!value) {
+    return;
+  }
+
+  // An incomplete command name with a highlighted suggestion completes it first.
+  const commandName = normalizeInput(value).split(/\s+/, 1)[0];
+  const isExactCommand = SUGGESTIONS.some((command) => command.name === commandName);
+  const highlighted = state.matches[state.active];
+  if (!isExactCommand && highlighted) {
+    acceptSuggestion(highlighted);
+    return;
+  }
+
+  // TODO: parse `value` and run the matching command.
+  showOutput(`: ${value}`);
+  ui.input.value = '';
+  renderSuggestions();
+}
+
+// ---------- Keyboard & pointer ----------
+
+function onInputKeyDown(event: KeyboardEvent): void {
+  switch (event.key) {
+    case 'ArrowDown':
+    case 'ArrowUp':
+      if (state.options.length) {
+        event.preventDefault();
+        moveActive(event.key === 'ArrowDown' ? 1 : -1);
+      }
+      break;
+    case 'Tab': {
+      const highlighted = state.matches[state.active];
+      if (highlighted) {
+        event.preventDefault();
+        acceptSuggestion(highlighted);
+      }
+      break;
+    }
+    case 'Enter':
+      event.preventDefault();
+      submit();
+      break;
+  }
+}
+
+/** Keeps every key pressed inside the palette away from ServiceNow's shortcuts. */
+function onPanelKeyDown(event: KeyboardEvent): void {
+  event.stopPropagation();
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    closePalette();
+  }
+}
+
+/** While open, swallow keys aimed at the page (focus outside the palette). */
+function onDocumentKeyDown(event: KeyboardEvent): void {
+  if (!open || !ui || event.composedPath().includes(ui.host)) {
     return;
   }
 
@@ -160,178 +223,117 @@ function onDocumentKeyDown(event: KeyboardEvent): void {
 }
 
 function onDocumentPointerDown(event: PointerEvent): void {
-  if (!open || !panel || event.composedPath().includes(panel)) {
-    return;
+  if (open && ui && !event.composedPath().includes(ui.panel)) {
+    closePalette();
   }
-
-  closePalette();
 }
 
+// ---------- Construction ----------
+
 function createHint(keys: string[], label: string, optional = false): HTMLElement {
-  const hint = document.createElement('span');
-  hint.className = optional ? 'hint hint-optional' : 'hint';
+  const hint = el('span', optional ? 'hint hint-optional' : 'hint');
   hint.append(...keys.map(createKbd), label);
   return hint;
 }
 
 function createFooter(): HTMLElement {
-  const footer = document.createElement('footer');
-  footer.className = 'footer';
-
-  const brand = document.createElement('div');
-  brand.className = 'brand';
-  const mark = document.createElement('span');
-  mark.className = 'mark';
+  const mark = el('span', 'mark');
   mark.setAttribute('aria-hidden', 'true');
-  const title = document.createElement('span');
-  title.textContent = 'SNForge';
-  brand.append(mark, title);
+  const brand = el('div', 'brand');
+  brand.append(mark, el('span', undefined, 'SNForge'));
 
-  const hints = document.createElement('div');
-  hints.className = 'hints';
+  const hints = el('div', 'hints');
   hints.append(
     createHint(['↑', '↓'], 'Navigate', true),
     createHint(['Tab'], 'Complete', true),
     createHint(['↵'], 'Run'),
   );
 
+  const footer = el('footer', 'footer');
   footer.append(brand, hints);
   return footer;
 }
 
-function createPalette(): void {
-  if (host) {
-    return;
-  }
+function createInput(listId: string): HTMLInputElement {
+  const input = el('input');
+  input.type = 'text';
+  input.autocomplete = 'off';
+  input.spellcheck = false;
+  input.placeholder = 'Type a command or table name…';
+  input.setAttribute('aria-label', 'Command input');
+  input.setAttribute('role', 'combobox');
+  input.setAttribute('aria-autocomplete', 'list');
+  input.setAttribute('aria-expanded', 'true');
+  input.setAttribute('aria-controls', listId);
+  input.addEventListener('input', renderSuggestions);
+  input.addEventListener('keydown', onInputKeyDown);
+  return input;
+}
 
-  host = document.createElement('div');
+function createPalette(): PaletteUi {
+  const host = el('div');
   host.setAttribute('data-snforge', '');
-  document.addEventListener('keydown', onDocumentKeyDown, true);
-  document.addEventListener('pointerdown', onDocumentPointerDown, true);
   const shadow = host.attachShadow({ mode: 'open' });
-  const style = document.createElement('style');
-  style.textContent = `${themes}\n${styles}`;
 
-  const palette = document.createElement('section');
-  palette.className = 'palette';
-  palette.dataset.theme = '';
-  palette.setAttribute('role', 'dialog');
-  palette.setAttribute('aria-label', 'SNForge command palette');
-  palette.addEventListener('keydown', (event) => {
-    event.stopPropagation();
-    if (event.key === 'Escape') {
-      event.preventDefault();
-      closePalette();
-    }
-  });
-  panel = palette;
+  const panel = el('section', 'palette');
+  panel.dataset.theme = '';
+  panel.setAttribute('role', 'dialog');
+  panel.setAttribute('aria-label', 'SNForge command palette');
+  panel.addEventListener('keydown', onPanelKeyDown);
 
-  const promptRow = document.createElement('div');
-  promptRow.className = 'prompt-row';
-  const glyph = document.createElement('span');
-  glyph.className = 'prompt-glyph';
+  const list = el('div', 'suggestions');
+  list.id = 'snforge-suggestions';
+  list.setAttribute('role', 'listbox');
+  list.setAttribute('aria-label', 'Command suggestions');
+
+  const input = createInput(list.id);
+  const glyph = el('span', 'prompt-glyph', ':');
   glyph.setAttribute('aria-hidden', 'true');
-  glyph.textContent = ':';
+  const promptRow = el('div', 'prompt-row');
+  promptRow.append(glyph, input, createKbd('Esc'));
 
-  commandInput = document.createElement('input');
-  commandInput.type = 'text';
-  commandInput.autocomplete = 'off';
-  commandInput.spellcheck = false;
-  commandInput.placeholder = 'Type a command or table name…';
-  commandInput.setAttribute('aria-label', 'Command input');
-  commandInput.setAttribute('role', 'combobox');
-  commandInput.setAttribute('aria-autocomplete', 'list');
-  commandInput.setAttribute('aria-expanded', 'true');
-  commandInput.addEventListener('input', () => {
-    activeSuggestionIndex = 0;
-    renderSuggestions();
-  });
-  commandInput.addEventListener('keydown', onInputKeyDown);
-  promptRow.append(glyph, commandInput, createKbd('Esc'));
-
-  output = document.createElement('div');
-  output.className = 'output';
+  const output = el('div', 'output');
   output.setAttribute('role', 'status');
 
-  suggestionsList = document.createElement('div');
-  suggestionsList.className = 'suggestions';
-  suggestionsList.id = 'snforge-command-suggestions';
-  suggestionsList.setAttribute('role', 'listbox');
-  suggestionsList.setAttribute('aria-label', 'Command suggestions');
-  commandInput.setAttribute('aria-controls', suggestionsList.id);
-
-  palette.append(promptRow, output, suggestionsList, createFooter());
-  shadow.append(style, palette);
+  const style = el('style');
+  style.textContent = `${themes}\n${styles}`;
+  panel.append(promptRow, output, list, createFooter());
+  shadow.append(style, panel);
   document.documentElement.append(host);
 
+  document.addEventListener('keydown', onDocumentKeyDown, true);
+  document.addEventListener('pointerdown', onDocumentPointerDown, true);
   void getSavedTheme().then((theme) => {
-    palette.dataset.theme = theme;
+    panel.dataset.theme = theme;
   });
   onThemeChanged((theme) => {
-    palette.dataset.theme = theme;
+    panel.dataset.theme = theme;
   });
-  renderSuggestions();
+
+  return { host, panel, input, output, list };
 }
 
-function onInputKeyDown(event: KeyboardEvent): void {
-  event.stopPropagation();
-  if (event.key === 'Escape') {
-    event.preventDefault();
-    closePalette();
-  } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-    const count = getSuggestionMatches().length;
-    if (count > 0) {
-      event.preventDefault();
-      const direction = event.key === 'ArrowDown' ? 1 : -1;
-      activeSuggestionIndex = (activeSuggestionIndex + direction + count) % count;
-      renderSuggestions();
-    }
-  } else if (event.key === 'Tab') {
-    const match = getSuggestionMatches()[activeSuggestionIndex];
-    if (match) {
-      event.preventDefault();
-      selectSuggestion(match.name);
-    }
-  } else if (event.key === 'Enter') {
-    event.preventDefault();
-    const value = commandInput?.value.trim();
-    if (value) {
-      const commandName = value.replace(/^:/, '').split(/\s+/, 1)[0].toLowerCase();
-      const exactCommand = SUGGESTIONS.some((command) => command.name === commandName);
-      if (!exactCommand) {
-        const match = getSuggestionMatches()[activeSuggestionIndex];
-        if (match) {
-          selectSuggestion(match.name);
-          return;
-        }
-      }
-      // TODO: parse `value` and run the matching command.
-      appendOutput(`: ${value}`);
-      if (commandInput) {
-        commandInput.value = '';
-      }
-      activeSuggestionIndex = 0;
-      renderSuggestions();
-    }
-  }
-}
+// ---------- Public API ----------
 
 export function togglePalette(): void {
-  createPalette();
-  open = !open;
-  if (!host) {
+  if (open) {
+    closePalette();
     return;
   }
-  host.style.display = open ? 'block' : 'none';
-  if (open) {
-    commandInput?.focus();
+
+  if (!ui) {
+    ui = createPalette();
+    renderSuggestions();
   }
+  open = true;
+  ui.host.style.display = 'block';
+  ui.input.focus();
 }
 
 function closePalette(): void {
-  if (!host || !open) {
+  if (!ui || !open) {
     return;
   }
   open = false;
-  host.style.display = 'none';
+  ui.host.style.display = 'none';
 }

@@ -1,3 +1,5 @@
+import { TOGGLE_PALETTE_COMMAND, type RuntimeMessage } from '../shared/messages';
+
 function isServiceNowUrl(value: string | undefined): boolean {
   if (!value) {
     return false;
@@ -12,26 +14,22 @@ function isServiceNowUrl(value: string | undefined): boolean {
   }
 }
 
+async function injectScripts(tabId: number): Promise<void> {
+  await chrome.scripting.executeScript({ target: { tabId }, files: ['bridge.js'], world: 'MAIN' });
+  await chrome.scripting.executeScript({ target: { tabId }, files: ['content.js'], world: 'ISOLATED' });
+}
+
 async function toggleInTab(tabId: number): Promise<void> {
-  const message = { type: 'palette/toggle' } as const;
+  const message: RuntimeMessage = { type: 'palette/toggle' };
   try {
     await chrome.tabs.sendMessage(tabId, message);
     return;
   } catch {
-    // The extension may have been loaded after this tab was already open.
+    // No content script yet, e.g. the tab was open before the extension loaded.
   }
 
   try {
-    await chrome.scripting.executeScript({
-      target: { tabId },
-      files: ['bridge.js'],
-      world: 'MAIN',
-    });
-    await chrome.scripting.executeScript({
-      target: { tabId },
-      files: ['content.js'],
-      world: 'ISOLATED',
-    });
+    await injectScripts(tabId);
     await chrome.tabs.sendMessage(tabId, message);
   } catch {
     // Restricted pages and unavailable tabs cannot run extension scripts.
@@ -39,7 +37,7 @@ async function toggleInTab(tabId: number): Promise<void> {
 }
 
 chrome.commands.onCommand.addListener((command, tab) => {
-  if (command !== 'toggle-palette' || tab?.id === undefined || !isServiceNowUrl(tab.url)) {
+  if (command !== TOGGLE_PALETTE_COMMAND || tab?.id === undefined || !isServiceNowUrl(tab.url)) {
     return;
   }
 

@@ -3,9 +3,53 @@
   <head>
     <meta charset="utf-8" />
     <title>SNForge</title>
+    <link rel="stylesheet" href="themes.css" />
+    <link rel="stylesheet" href="popup.css" />
   </head>
   <body data-theme="">
-    <main id="app"></main>
+    <header class="header">
+      <span class="mark" aria-hidden="true">:</span>
+      <div class="title">
+        <strong>SNForge</strong>
+        <span><span id="version"></span> · ServiceNow command palette</span>
+      </div>
+    </header>
+
+    <section class="section">
+      <fieldset class="themes" id="themes">
+        <legend class="section-title">Theme</legend>
+        <!-- One card per entry in THEMES (config.ts), cloned from the template below. -->
+      </fieldset>
+    </section>
+
+    <section class="section">
+      <h2 class="section-title">Open palette</h2>
+      <div class="shortcut">
+        <div class="keys" id="shortcut-keys"></div>
+        <button type="button" class="link-button" id="change-shortcut">Change</button>
+      </div>
+    </section>
+
+    <template id="theme-card-template">
+      <label class="theme-card">
+        <input type="radio" name="theme" />
+        <span class="preview" aria-hidden="true">
+          <span class="preview-bar"></span>
+          <span class="preview-row">
+            <span class="preview-dot"></span>
+            <span class="preview-line"></span>
+          </span>
+          <span class="preview-row">
+            <span class="preview-line short"></span>
+          </span>
+        </span>
+        <span class="theme-name">
+          <span class="theme-label"></span>
+          <span class="check" aria-hidden="true">✓</span>
+        </span>
+      </label>
+    </template>
+
     <script src="popup.js"></script>
   </body>
 </html>

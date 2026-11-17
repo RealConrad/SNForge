@@ -1,4 +1,10 @@
-import type { BridgeRequest, BridgeResponse, SessionInfo } from '../shared/messages';
+import {
+  BRIDGE_REQUEST_EVENT,
+  BRIDGE_RESPONSE_EVENT,
+  isBridgeRequest,
+  type BridgeResponse,
+  type SessionInfo,
+} from '../shared/messages';
 
 interface ServiceNowUser {
   userName?: unknown;
@@ -14,22 +20,33 @@ interface ServiceNowPage extends Window {
   g_user?: ServiceNowUser;
   NOW?: { user?: ServiceNowUser };
   g_ck?: unknown;
+  __snforgeBridge?: boolean;
 }
 
+/** The top window plus any same-origin frames (e.g. gsft_main in UI16). */
 function getPageCandidates(): ServiceNowPage[] {
-  const pages: ServiceNowPage[] = [window as ServiceNowPage];
+  const pages: ServiceNowPage[] = [window];
 
   for (let index = 0; index < window.frames.length; index += 1) {
     try {
-      const frame = window.frames[index] as ServiceNowPage;
-      void frame.document;
+      const frame: ServiceNowPage = window.frames[index];
+      void frame.document; // throws for cross-origin frames
       pages.push(frame);
     } catch {
-      // Ignore cross-origin frames; their globals are not available to the bridge.
+      // Cross-origin frames' globals are not available to the bridge.
     }
   }
 
   return pages;
+}
+
+function getUser(page: ServiceNowPage): ServiceNowUser | undefined {
+  return page.g_user ?? page.NOW?.user;
+}
+
+function getUserSysId(user: ServiceNowUser): string | undefined {
+  const id = user.userID ?? user.userId ?? user.sys_id;
+  return typeof id === 'string' ? id : undefined;
 }
 
 function getRoles(user: ServiceNowUser): string[] {
@@ -40,12 +57,13 @@ function getRoles(user: ServiceNowUser): string[] {
     roles = user.roles.split(',').map((role) => role.trim()).filter(Boolean);
   }
 
+  // Some UIs omit the role list; the role helper still knows about admin.
   try {
-    if ((user.hasRoleExactly?.('admin') || user.hasRole?.('admin')) && !roles.includes('admin')) {
+    if (!roles.includes('admin') && (user.hasRoleExactly?.('admin') ?? user.hasRole?.('admin'))) {
       roles.push('admin');
     }
   } catch {
-    // Keep any explicit role list if the page's role helper is unavailable.
+    // Keep the explicit role list if the page's role helper throws.
   }
 
   return roles;
@@ -53,31 +71,25 @@ function getRoles(user: ServiceNowUser): string[] {
 
 function readSession(): SessionInfo | null {
   const pages = getPageCandidates();
-  const pageWithUser = pages.find((candidate) => {
-    const user = candidate.g_user ?? candidate.NOW?.user;
-    return typeof (user?.userID ?? user?.userId ?? user?.sys_id) === 'string';
-  });
-  const user = pageWithUser?.g_user ?? pageWithUser?.NOW?.user;
-  const userSysId = user?.userID ?? user?.userId ?? user?.sys_id;
-
-  if (!user || typeof userSysId !== 'string') {
+  const user = pages.map(getUser).find((candidate) => candidate && getUserSysId(candidate));
+  const userSysId = user && getUserSysId(user);
+  if (!user || !userSysId) {
     return null;
   }
 
-  const token = pages.find((candidate) => typeof candidate.g_ck === 'string')?.g_ck;
-  const roles = getRoles(user);
+  const token = pages.map((page) => page.g_ck).find((value) => typeof value === 'string');
 
   return {
     userName: typeof user.userName === 'string' ? user.userName : '',
     userSysId,
-    roles,
+    roles: getRoles(user),
     token: typeof token === 'string' ? token : '',
   };
 }
 
-window.addEventListener('snforge:req', (event: Event) => {
-  const request = (event as CustomEvent<BridgeRequest>).detail;
-  if (!request || request.type !== 'bridge/getSession') {
+function onRequest(event: Event): void {
+  const request: unknown = event instanceof CustomEvent ? event.detail : undefined;
+  if (!isBridgeRequest(request)) {
     return;
   }
 
@@ -86,5 +98,12 @@ window.addEventListener('snforge:req', (event: Event) => {
     type: 'bridge/session',
     session: readSession(),
   };
-  window.dispatchEvent(new CustomEvent('snforge:res', { detail: response }));
-});
+  window.dispatchEvent(new CustomEvent(BRIDGE_RESPONSE_EVENT, { detail: response }));
+}
+
+// The service worker may inject the bridge into a tab that already has it.
+const page: ServiceNowPage = window;
+if (!page.__snforgeBridge) {
+  page.__snforgeBridge = true;
+  window.addEventListener(BRIDGE_REQUEST_EVENT, onRequest);
+}
