@@ -20,6 +20,10 @@
       "run_at": "document_idle"
     }
   ],
+  "action": {
+    "default_title": "SNForge",
+    "default_popup": "popup.html"
+  },
   "permissions": ["storage", "scripting"],
   "host_permissions": ["https://*.service-now.com/*"],
   "commands": {

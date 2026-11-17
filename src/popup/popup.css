@@ -1,0 +1,234 @@
+* {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  width: 320px;
+  margin: 0;
+  background: var(--surface);
+  color: var(--text);
+  font-family: Inter, "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.mark {
+  display: inline-grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+  font-family: "Cascadia Code", Consolas, monospace;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.title {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.title strong {
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.title span {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.section {
+  padding: 14px 16px 16px;
+}
+
+.section + .section {
+  border-top: 1px solid var(--border);
+}
+
+.section-title {
+  margin: 0 0 10px;
+  color: var(--faint);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* ---------- Theme cards ---------- */
+
+.themes {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.theme-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 6px 6px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color 120ms ease, transform 120ms ease;
+}
+
+.theme-card:hover {
+  transform: translateY(-1px);
+}
+
+.theme-card input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.theme-card:has(input:checked) {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.theme-card:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.preview {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  height: 46px;
+  padding: 6px;
+  border-radius: 6px;
+  background: var(--bg);
+}
+
+.preview-bar {
+  height: 8px;
+  border-radius: 3px;
+  background: var(--surface-3);
+}
+
+.preview-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.preview-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+.preview-line {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--muted);
+  opacity: 0.6;
+}
+
+.preview-line.short {
+  flex: 0 0 55%;
+  opacity: 0.35;
+}
+
+.theme-name {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2px;
+  font-size: 12px;
+  font-weight: 550;
+}
+
+.check {
+  display: none;
+  color: var(--accent);
+  font-size: 12px;
+}
+
+.theme-card:has(input:checked) .check {
+  display: inline;
+}
+
+/* ---------- Shortcut ---------- */
+
+.shortcut {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.keys {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+}
+
+kbd {
+  display: inline-flex;
+  min-width: 22px;
+  height: 22px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.link-button {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 550;
+}
+
+.link-button:hover {
+  background: var(--surface-2);
+}
+
+.link-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}

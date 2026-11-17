@@ -6,6 +6,7 @@ const watch = process.argv.includes('--watch');
 await rm('dist', { recursive: true, force: true });
 await mkdir('dist', { recursive: true });
 await cp('manifest.json', 'dist/manifest.json');
+await cp('src/popup/popup.html', 'dist/popup.html');
 
 const common = {
   bundle: true,
@@ -33,6 +34,13 @@ const builds = [
     entryPoints: ['src/page/bridge.ts'],
     outfile: 'dist/bridge.js',
     format: 'iife',
+  },
+  {
+    ...common,
+    entryPoints: ['src/popup/popup.ts'],
+    outfile: 'dist/popup.js',
+    format: 'iife',
+    loader: { '.css': 'text' },
   },
 ];
 

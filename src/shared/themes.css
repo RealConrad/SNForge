@@ -1,0 +1,50 @@
+/* Theme tokens shared by the palette and the popup.
+   Any element with a data-theme attribute gets that theme's variables. */
+
+[data-theme] {
+  --bg: #16161e;
+  --surface: #1a1b26;
+  --surface-2: #222436;
+  --surface-3: #2a2e44;
+  --text: #c0caf5;
+  --muted: #737aa2;
+  --faint: #545c7e;
+  --accent: #7aa2f7;
+  --accent-text: #11131c;
+  --border: rgb(192 202 245 / 9%);
+  --border-strong: rgb(192 202 245 / 16%);
+  --success: #9ece6a;
+  --error: #f7768e;
+}
+
+[data-theme="midnight"] {
+  --bg: #0a1018;
+  --surface: #0e1621;
+  --surface-2: #142030;
+  --surface-3: #1b2b3e;
+  --text: #d3e2f2;
+  --muted: #7f93a8;
+  --faint: #566a80;
+  --accent: #5ccfd9;
+  --accent-text: #061016;
+  --border: rgb(211 226 242 / 8%);
+  --border-strong: rgb(211 226 242 / 15%);
+  --success: #83d6a5;
+  --error: #f08a8a;
+}
+
+[data-theme="obsidian"] {
+  --bg: #0f0d14;
+  --surface: #15131c;
+  --surface-2: #1e1b28;
+  --surface-3: #282334;
+  --text: #e6e1f0;
+  --muted: #9a92ab;
+  --faint: #6c6480;
+  --accent: #c4a7e7;
+  --accent-text: #16121d;
+  --border: rgb(230 225 240 / 8%);
+  --border-strong: rgb(230 225 240 / 15%);
+  --success: #a6da95;
+  --error: #ee99a0;
+}
