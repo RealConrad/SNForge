@@ -51,6 +51,19 @@ Commands start with `:`.
 Click the SNForge icon in the Chrome toolbar to choose a theme (Tokyo, Midnight,
 Obsidian). Open palettes update immediately.
 
+## Permissions and privacy
+
+SNForge asks for three permissions and no access to any website in advance:
+
+| Permission | Why |
+|---|---|
+| `activeTab` | Lets SNForge work on the current tab only after you press the shortcut. Nothing runs on a page before that. |
+| `scripting` | Adds the palette to that tab when you press the shortcut. |
+| `storage` | Remembers your theme. |
+
+It collects nothing and sends nothing anywhere; see [PRIVACY.md](PRIVACY.md). The
+security model and how to report a vulnerability are in [SECURITY.md](SECURITY.md).
+
 ## Development
 
 ```
@@ -61,3 +74,14 @@ npm run typecheck
 ```
 
 Load `dist/` at `chrome://extensions` with Developer mode on ("Load unpacked").
+
+## Release
+
+```
+npm ci             # exact versions from package-lock.json
+npm run typecheck
+npm run build      # clean build → dist/
+```
+
+Zip the contents of `dist/` for the Chrome Web Store. Never zip a `npm run watch` build:
+it contains sourcemaps.

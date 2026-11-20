@@ -8,8 +8,7 @@ function isServiceNowUrl(value: string | undefined): boolean {
 
   try {
     const url = new URL(value);
-    return url.protocol === 'https:' &&
-      (url.hostname === 'service-now.com' || url.hostname.endsWith('.service-now.com'));
+    return url.protocol === 'https:' && url.hostname.endsWith('.service-now.com');
   } catch {
     return false;
   }
@@ -26,7 +25,7 @@ async function toggleInTab(tabId: number): Promise<void> {
     await chrome.tabs.sendMessage(tabId, message);
     return;
   } catch {
-    // No content script yet, e.g. the tab was open before the extension loaded.
+    // No content script yet: nothing is injected until the first hotkey press on a page.
   }
 
   try {
@@ -45,21 +44,36 @@ chrome.commands.onCommand.addListener((command, tab) => {
   void toggleInTab(tab.id);
 });
 
-/** True when `url` is on the same ServiceNow origin as the tab that asked for it. */
-function isSameInstance(url: string, senderUrl: string | undefined): boolean {
-  if (!isServiceNowUrl(url) || !isServiceNowUrl(senderUrl)) {
+/** True when `url` is on the same ServiceNow origin as the frame that asked for it. */
+function isSameInstance(url: string, origin: string | undefined): boolean {
+  if (!isServiceNowUrl(url) || !isServiceNowUrl(origin)) {
     return false;
   }
-  return new URL(url).origin === new URL(senderUrl ?? '').origin;
+  return new URL(url).origin === origin;
 }
 
 /** Content scripts may open their own instance, plus the docs page. Nothing else. */
-function isAllowedTabUrl(url: string, senderUrl: string | undefined): boolean {
-  return url === DOCS_URL || isSameInstance(url, senderUrl);
+function isAllowedTabUrl(url: string, origin: string | undefined): boolean {
+  return url === DOCS_URL || isSameInstance(url, origin);
+}
+
+/**
+ * Origin of the frame that sent a message. Chrome fills sender.origin / sender.url itself,
+ * and unlike sender.tab.url they need no host permission.
+ */
+function senderOrigin(sender: chrome.runtime.MessageSender): string | undefined {
+  if (sender.origin) {
+    return sender.origin;
+  }
+  try {
+    return sender.url ? new URL(sender.url).origin : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 chrome.runtime.onMessage.addListener((message: unknown, sender) => {
-  if (!isTabOpenMessage(message) || !sender.tab || !isAllowedTabUrl(message.url, sender.tab.url)) {
+  if (!isTabOpenMessage(message) || !sender.tab || !isAllowedTabUrl(message.url, senderOrigin(sender))) {
     return;
   }
 

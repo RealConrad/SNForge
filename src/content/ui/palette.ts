@@ -185,7 +185,7 @@ function buildItems(input: string): PaletteItem[] {
     return suggestedItems('').slice(0, MAX_SUGGESTIONS);
   }
 
-  const typedName = trimmed.replace(/^:/, '').split(/\s+/, 1)[0].toLowerCase();
+  const typedName = (trimmed.replace(/^:/, '').split(/\s+/, 1)[0] ?? '').toLowerCase();
   const isCommandInput = trimmed.startsWith(':');
   const exact = findCommand(typedName);
   const items: PaletteItem[] = [];
@@ -255,7 +255,11 @@ function createOption(item: PaletteItem, index: number): HTMLButtonElement {
       setActive(index);
     }
   });
-  option.addEventListener('click', () => item.accept());
+  option.addEventListener('click', (event) => {
+    if (event.isTrusted) {
+      item.accept();
+    }
+  });
   return option;
 }
 
@@ -316,7 +320,14 @@ function moveActive(direction: 1 | -1): void {
 
 // ---------- Keyboard & pointer ----------
 
+/**
+ * The palette only reacts to real user input. Page scripts can dispatch synthetic events
+ * at the host element; those have isTrusted === false and are ignored everywhere.
+ */
 function onInputKeyDown(event: KeyboardEvent): void {
+  if (!event.isTrusted) {
+    return;
+  }
   const highlighted = state.items[state.active];
 
   switch (event.key) {
@@ -348,7 +359,7 @@ function onInputKeyDown(event: KeyboardEvent): void {
 /** Keeps every key pressed inside the palette away from ServiceNow's shortcuts. */
 function onPanelKeyDown(event: KeyboardEvent): void {
   event.stopPropagation();
-  if (event.key === 'Escape') {
+  if (event.isTrusted && event.key === 'Escape') {
     event.preventDefault();
     closePalette();
   }
@@ -356,7 +367,7 @@ function onPanelKeyDown(event: KeyboardEvent): void {
 
 /** While open, swallow keys aimed at the page (focus outside the palette). */
 function onDocumentKeyDown(event: KeyboardEvent): void {
-  if (!open || !ui || event.composedPath().includes(ui.host)) {
+  if (!open || !ui || !event.isTrusted || event.composedPath().includes(ui.host)) {
     return;
   }
 
@@ -367,8 +378,13 @@ function onDocumentKeyDown(event: KeyboardEvent): void {
   }
 }
 
-function onDocumentPointerDown(event: PointerEvent): void {
-  if (open && ui && !event.composedPath().includes(ui.panel)) {
+/**
+ * The host covers the viewport as a backdrop. Pointer events from inside the panel are
+ * stopped at the panel (see createPalette), so whatever reaches the host is a click on
+ * the backdrop, i.e. outside the palette.
+ */
+function onBackdropPointerDown(event: PointerEvent): void {
+  if (open && event.isTrusted) {
     closePalette();
   }
 }
@@ -408,13 +424,16 @@ function createInput(listId: string): HTMLInputElement {
 function createPalette(): PaletteUi {
   const host = el('div');
   host.setAttribute('data-snforge', '');
-  const shadow = host.attachShadow({ mode: 'open' });
+  // Closed: page scripts cannot reach the palette's DOM through host.shadowRoot.
+  const shadow = host.attachShadow({ mode: 'closed' });
 
   const panel = el('section', 'palette');
   panel.dataset.theme = '';
   panel.setAttribute('role', 'dialog');
   panel.setAttribute('aria-label', 'SNForge command palette');
   panel.addEventListener('keydown', onPanelKeyDown);
+  panel.addEventListener('pointerdown', (event) => event.stopPropagation());
+  host.addEventListener('pointerdown', onBackdropPointerDown);
 
   const list = el('div', 'suggestions');
   list.id = 'snforge-suggestions';
@@ -438,7 +457,6 @@ function createPalette(): PaletteUi {
   document.documentElement.append(host);
 
   document.addEventListener('keydown', onDocumentKeyDown, true);
-  document.addEventListener('pointerdown', onDocumentPointerDown, true);
   void getSavedTheme().then((theme) => {
     panel.dataset.theme = theme;
   });

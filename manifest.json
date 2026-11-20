@@ -3,29 +3,20 @@
   "name": "SNForge",
   "version": "0.1.0",
   "description": "Keyboard command palette for ServiceNow admins.",
+  "minimum_chrome_version": "120",
   "background": {
     "service_worker": "background.js",
     "type": "module"
   },
-  "content_scripts": [
-    {
-      "matches": ["https://*.service-now.com/*"],
-      "js": ["bridge.js"],
-      "world": "MAIN",
-      "run_at": "document_idle"
-    },
-    {
-      "matches": ["https://*.service-now.com/*"],
-      "js": ["content.js"],
-      "run_at": "document_idle"
-    }
-  ],
   "action": {
     "default_title": "SNForge",
     "default_popup": "popup.html"
   },
-  "permissions": ["storage", "scripting"],
-  "host_permissions": ["https://*.service-now.com/*"],
+  "permissions": [
+    "storage",
+    "scripting",
+    "activeTab"
+  ],
   "commands": {
     "toggle-palette": {
       "suggested_key": {
@@ -33,5 +24,8 @@
       },
       "description": "Open or close the SNForge command palette"
     }
+  },
+  "content_security_policy": {
+    "extension_pages": "default-src 'none'; script-src 'self'; style-src 'self'"
   }
 }

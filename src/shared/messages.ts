@@ -51,12 +51,23 @@ export function isBridgeRequest(value: unknown): value is BridgeRequest {
   return isRecord(value) && value.type === 'bridge/getSession' && typeof value.id === 'string';
 }
 
+/** ServiceNow sys_ids are 32 lowercase hex characters. */
+const SYS_ID = /^[0-9a-f]{32}$/;
+/** Far above any real user's role count; bounds what a page can hand us. */
+const MAX_ROLES = 5_000;
+
+/**
+ * The session comes from the page, so it is untrusted input: userSysId ends up in a REST
+ * query (content/access.ts) and must have the exact sys_id shape.
+ */
 function isSessionInfo(value: unknown): value is SessionInfo {
   return isRecord(value) &&
     typeof value.userName === 'string' &&
     typeof value.userSysId === 'string' &&
+    SYS_ID.test(value.userSysId) &&
     typeof value.token === 'string' &&
-    isStringArray(value.roles);
+    isStringArray(value.roles) &&
+    value.roles.length <= MAX_ROLES;
 }
 
 export function isBridgeResponse(value: unknown): value is BridgeResponse {

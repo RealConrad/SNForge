@@ -1,4 +1,5 @@
 import type { Command } from './types';
+import { instanceUrl } from './urls';
 
 /** Data for a command that opens one fixed page of the current instance. */
 interface PageLink {
@@ -21,7 +22,7 @@ export function pageLinkCommand(link: PageLink): Command {
     usage: link.name,
     async run(ctx) {
       // A plain URL, not classicPageUrl(): these pages must not be wrapped in the classic frame.
-      const url = new URL(link.path, ctx.urlOptions.origin).toString();
+      const url = instanceUrl(link.path, ctx.urlOptions.origin);
       await ctx.openTab(url);
       ctx.ui.close();
     },

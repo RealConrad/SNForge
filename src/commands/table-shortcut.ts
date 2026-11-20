@@ -43,10 +43,10 @@ export function parseTableShortcut(input: string): TableShortcut | null {
     return null;
   }
 
-  const [target, ...rest] = trimmed.split(/\s+/);
+  const [target = '', ...rest] = trimmed.split(/\s+/);
   // Only the first word decides the tab and is lowercased; query values keep their case.
   const newTab = target !== target.toLowerCase();
-  const [table, suffix = 'list', ...extra] = target.toLowerCase().split('.');
+  const [table = '', suffix = 'list', ...extra] = target.toLowerCase().split('.');
   const view = Object.hasOwn(VIEW_SUFFIXES, suffix) ? VIEW_SUFFIXES[suffix] : undefined;
 
   if (!TABLE_NAME.test(table) || !view || extra.length > 0) {

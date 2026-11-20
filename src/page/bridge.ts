@@ -29,9 +29,11 @@ function getPageCandidates(): ServiceNowPage[] {
 
   for (let index = 0; index < window.frames.length; index += 1) {
     try {
-      const frame: ServiceNowPage = window.frames[index];
-      void frame.document; // throws for cross-origin frames
-      pages.push(frame);
+      const frame: ServiceNowPage | undefined = window.frames[index];
+      if (frame) {
+        void frame.document; // throws for cross-origin frames
+        pages.push(frame);
+      }
     } catch {
       // Cross-origin frames' globals are not available to the bridge.
     }
