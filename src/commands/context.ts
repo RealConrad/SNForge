@@ -1,3 +1,4 @@
+import { toggleFieldNames } from '../content/field-names';
 import { isNextExperience, navigate, openTab } from '../content/navigation';
 import type { CommandContext } from './types';
 
@@ -10,5 +11,6 @@ export function createCommandContext(ui: CommandContext['ui'], signal: AbortSign
     ui,
     openTab,
     navigate,
+    toggleFieldNames,
   };
 }

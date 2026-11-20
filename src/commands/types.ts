@@ -27,6 +27,11 @@ export interface CommandContext {
   navigate(url: string): void;
   /** Path + query of the current page, e.g. "/incident.do?sys_id=abc". */
   currentPath: string;
+  /**
+   * Shows technical field names on classic forms / lists, or hides them if shown.
+   * Returns how many were added or removed; 0 means the page has no classic form or list.
+   */
+  toggleFieldNames(): number;
 }
 
 export interface Command {

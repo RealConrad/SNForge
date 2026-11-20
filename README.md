@@ -45,6 +45,7 @@ Commands start with `:`.
 | `:nav` (`:navbar`, `:shell`, `:polaris`) | Reload the current classic page inside the Next Experience navigation |
 | `:fd` (`:flow`, `:flowdesigner`) | Open Flow Designer in a new tab |
 | `:st` (`:studio`) | Open ServiceNow Studio in a new tab |
+| `:names` (`:fields`, `:tn`, `:technical`) | Show the technical name of every field under its label on a classic form or list; run again to hide |
 
 ## Themes
 

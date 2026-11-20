@@ -31,5 +31,6 @@ export const SUGGESTED_INPUTS: readonly string[] = [
   ':fd',
   ':st',
   ':nav',
+  ':names',
   ':help',
 ];

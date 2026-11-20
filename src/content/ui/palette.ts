@@ -186,32 +186,25 @@ function buildItems(input: string): PaletteItem[] {
   }
 
   const typedName = (trimmed.replace(/^:/, '').split(/\s+/, 1)[0] ?? '').toLowerCase();
-  const isCommandInput = trimmed.startsWith(':');
+
+  // Commands come first: the exact match ("help"), then every name or alias that
+  // starts with what was typed ("nam" → :names).
   const exact = findCommand(typedName);
-  const items: PaletteItem[] = [];
+  const partial = matchCommands(typedName).filter((command) => command !== exact);
+  const commands = exact ? [exact, ...partial] : partial;
 
-  // A bare word that is exactly a command name ("help") offers the command first.
-  if (exact) {
-    items.push(commandItem(exact, typedName, trimmed));
-  }
+  const items = uniqueByTitle([
+    ...commands.map((command) => commandItem(command, typedName, trimmed)),
+    ...suggestedItems(trimmed),
+  ]);
 
+  // The typed text as a table name is the fallback, so it goes last, and it always
+  // keeps its place in the list however many other matches there are.
   const shortcut = parseTableShortcut(trimmed);
-  if (shortcut) {
-    items.push(tableItem(shortcut));
+  if (!shortcut) {
+    return items.slice(0, MAX_SUGGESTIONS);
   }
-
-  items.push(...suggestedItems(trimmed));
-
-  // Partial command names are only suggested after ":", to keep the list short.
-  if (isCommandInput) {
-    for (const command of matchCommands(typedName)) {
-      if (command !== exact) {
-        items.push(commandItem(command, typedName, trimmed));
-      }
-    }
-  }
-
-  return uniqueByTitle(items).slice(0, MAX_SUGGESTIONS);
+  return uniqueByTitle([...items.slice(0, MAX_SUGGESTIONS - 1), tableItem(shortcut)]);
 }
 
 /** Suggestions overlap with the typed shortcut / command matches; keep the first of each. */
