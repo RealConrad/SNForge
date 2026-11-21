@@ -1,5 +1,6 @@
 import { registerCommand } from '../registry';
 import { fd } from './fd';
+import { find } from './find';
 import { help } from './help';
 import { lang } from './lang';
 import { names } from './names';
@@ -14,4 +15,5 @@ export function registerBuiltins(): void {
   registerCommand(st);
   registerCommand(names);
   registerCommand(lang);
+  registerCommand(find);
 }

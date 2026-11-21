@@ -36,6 +36,14 @@ new tab.**
 
 The suffix and the new-tab rule combine: `incident.NEW` opens a new form in a new tab.
 
+## Finding a record by sys_id
+
+Paste a sys_id into the palette and press Enter; SNForge finds which table it belongs to
+and opens the record. It searches the base tables that cover most records
+(configuration, tasks, CIs, users, groups, update sets and a few more), all at once, so
+it normally answers in well under a second. Records in other tables are not found; the
+list is `SYS_ID_SEARCH_TABLES` in `src/config.ts`.
+
 ## Commands
 
 Commands start with `:`.
@@ -46,6 +54,7 @@ Commands start with `:`.
 | `:nav` (`:navbar`, `:shell`, `:polaris`) | Reload the current classic page inside the Next Experience navigation |
 | `:fd` (`:flow`, `:flowdesigner`) | Open Flow Designer in a new tab |
 | `:st` (`:studio`) | Open ServiceNow Studio in a new tab |
+| `:find <sys_id>` (`:sysid`, `:id`) | Open the record with that sys_id. Pasting a sys_id on its own does the same |
 | `:lang <code>` (`:language`, `:locale`) | Change your session language, e.g. `:lang de` for German or `:lang fr` for French. The code must be a language installed on the instance; a wrong code shows the available ones |
 | `:names` (`:fields`, `:tn`, `:technical`) | Show the technical name of every field under its label on a classic form or list; run again to hide |
 

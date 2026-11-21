@@ -1,3 +1,5 @@
+import { isSysId } from './sys-id';
+
 /** Name of the `chrome.commands` entry in manifest.json. */
 export const TOGGLE_PALETTE_COMMAND = 'toggle-palette';
 
@@ -51,8 +53,6 @@ export function isBridgeRequest(value: unknown): value is BridgeRequest {
   return isRecord(value) && value.type === 'bridge/getSession' && typeof value.id === 'string';
 }
 
-/** ServiceNow sys_ids are 32 lowercase hex characters. */
-const SYS_ID = /^[0-9a-f]{32}$/;
 /** Far above any real user's role count; bounds what a page can hand us. */
 const MAX_ROLES = 5_000;
 
@@ -64,7 +64,7 @@ function isSessionInfo(value: unknown): value is SessionInfo {
   return isRecord(value) &&
     typeof value.userName === 'string' &&
     typeof value.userSysId === 'string' &&
-    SYS_ID.test(value.userSysId) &&
+    isSysId(value.userSysId) &&
     typeof value.token === 'string' &&
     isStringArray(value.roles) &&
     value.roles.length <= MAX_ROLES;

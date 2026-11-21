@@ -11,6 +11,7 @@ import {
 import type { Command, CommandContext, OutputKind } from '../../commands/types';
 import { MAX_SUGGESTIONS, SUGGESTED_INPUTS } from '../../config';
 import { el } from '../../shared/dom';
+import { isSysId } from '../../shared/sys-id';
 import { getSavedTheme, onThemeChanged } from '../../shared/theme';
 import themes from '../../shared/themes.css';
 import { isNextExperience, navigate, openTab } from '../navigation';
@@ -139,6 +140,17 @@ function tableItem(shortcut: TableShortcut): PaletteItem {
   };
 }
 
+/** A pasted sys_id runs :find, so there is one code path for the search. */
+function sysIdItem(sysId: string): PaletteItem {
+  return {
+    icon: '#',
+    title: `Find record: ${sysId}`,
+    description: 'Search by sys_id and open the record',
+    hint: '',
+    accept: () => runCommand(`:find ${sysId}`),
+  };
+}
+
 function commandItem(command: Command, typedName: string, input: string): PaletteItem {
   const isExact = findCommand(typedName) === command;
   return {
@@ -183,6 +195,11 @@ function buildItems(input: string): PaletteItem[] {
   const trimmed = input.trim();
   if (!trimmed) {
     return suggestedItems('').slice(0, MAX_SUGGESTIONS);
+  }
+
+  // A sys_id is unambiguous (and also looks like a table name), so it is the only item.
+  if (isSysId(trimmed.toLowerCase())) {
+    return [sysIdItem(trimmed.toLowerCase())];
   }
 
   const typedName = (trimmed.replace(/^:/, '').split(/\s+/, 1)[0] ?? '').toLowerCase();

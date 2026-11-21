@@ -4,6 +4,8 @@
  * the CSRF token goes in X-UserToken.
  */
 
+import { isSysId } from './sys-id';
+
 export type SnRecord = Record<string, unknown>;
 
 export class SnApiError extends Error {
@@ -91,7 +93,7 @@ export function createSnApi(token: string): SnApi {
     options: Omit<GetRecordsOptions, 'query' | 'limit'> = {},
   ): Promise<SnRecord | null> {
     // sys_id goes into an encoded query, so only accept the real format.
-    if (!/^[0-9a-f]{32}$/.test(sysId)) {
+    if (!isSysId(sysId)) {
       return null;
     }
     // Query instead of /table/{sys_id}: "not found" is an empty list, not a 404.
