@@ -36,8 +36,6 @@ new tab.**
 
 The suffix and the new-tab rule combine: `incident.NEW` opens a new form in a new tab.
 
-Tip: copy an encoded query from any list's breadcrumb (right-click → *Copy query*).
-
 ## Commands
 
 Commands start with `:`.
