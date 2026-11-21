@@ -39,10 +39,16 @@ The suffix and the new-tab rule combine: `incident.NEW` opens a new form in a ne
 ## Finding a record by sys_id
 
 Paste a sys_id into the palette and press Enter; SNForge finds which table it belongs to
-and opens the record. It searches the base tables that cover most records
-(configuration, tasks, CIs, users, groups, update sets and a few more), all at once, so
-it normally answers in well under a second. Records in other tables are not found; the
-list is `SYS_ID_SEARCH_TABLES` in `src/config.ts`.
+and opens the record.
+
+- It first asks the base tables that cover most records (configuration, tasks, CIs,
+  users, groups, update sets and a few more), all at once. This normally answers in
+  well under a second.
+- If the record isn't there, it searches every other base table on the instance. This
+  can take from a few seconds to a minute; the palette shows the progress, and `Esc`
+  cancels.
+
+Tables that don't allow web service access can't be searched.
 
 ## Commands
 

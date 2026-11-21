@@ -1,29 +1,40 @@
-import { SYS_ID_SEARCH_TABLES } from '../../config';
-import type { SnApi } from '../../shared/sn-api';
+import { SYS_ID_SCAN_BATCH_SIZE, SYS_ID_SCAN_SKIP_PREFIXES, SYS_ID_SEARCH_TABLES } from '../../config';
+import type { FoundRecord, SnApi } from '../../shared/sn-api';
 import { isSysId } from '../../shared/sys-id';
-import type { Command } from '../types';
+import type { Command, CommandContext } from '../types';
 import { classicPageUrl } from '../urls';
 
-/**
- * Finds the table of the record with `sysId`, or null when none of the search tables
- * has it.
+/*
+ * ServiceNow has no "which table is this sys_id in?" API; you can only ask one table at
+ * a time. Two things keep that fast:
  *
- * ServiceNow has no "which table is this sys_id in?" API, so we ask a short list of
- * base tables at the same time. A base table also answers for every table that extends
- * it (`task` finds incidents, changes, …) and says which one in sys_class_name. Each
- * request is a primary-key lookup, and the first hit cancels the rest.
+ * - A base table also answers for every table that extends it (`task` finds incidents,
+ *   changes, …) and says which one in sys_class_name. So only base tables are asked.
+ * - Stage 1 asks the few tables that hold most records, all at once. Only when that
+ *   misses does stage 2 go through every other base table, in batches.
  */
-async function findTable(api: SnApi, sysId: string, signal: AbortSignal): Promise<string | null> {
+
+const FIELDS = ['sys_class_name'];
+
+/** The base tables for stage 2. Fetched once per page: the table list doesn't change while you work. */
+let otherBaseTables: string[] | undefined;
+
+/** The record's real table. Tables that can't be extended have no sys_class_name. */
+function realTable({ table, record }: FoundRecord): string {
+  return typeof record.sys_class_name === 'string' && record.sys_class_name ? record.sys_class_name : table;
+}
+
+/** Stage 1: every common table at the same time; the first hit cancels the rest. */
+async function findInCommonTables(api: SnApi, sysId: string, signal: AbortSignal): Promise<string | null> {
   const firstHit = new AbortController();
   const lookupSignal = AbortSignal.any([signal, firstHit.signal]);
 
   const lookups = SYS_ID_SEARCH_TABLES.map(async (table) => {
-    const record = await api.getRecord(table, sysId, { fields: ['sys_class_name'], signal: lookupSignal });
+    const record = await api.getRecord(table, sysId, { fields: FIELDS, signal: lookupSignal });
     if (!record) {
       throw new Error(`Not in ${table}`);
     }
-    // Tables that can't be extended have no sys_class_name; the record is in `table` itself.
-    return typeof record.sys_class_name === 'string' && record.sys_class_name ? record.sys_class_name : table;
+    return realTable({ table, record });
   });
 
   try {
@@ -35,6 +46,41 @@ async function findTable(api: SnApi, sysId: string, signal: AbortSignal): Promis
   } finally {
     firstHit.abort();
   }
+}
+
+/** Every base table of the instance that stage 1 didn't ask, business tables first. */
+async function loadOtherBaseTables(api: SnApi, signal: AbortSignal): Promise<string[]> {
+  const records = await api.getRecords('sys_db_object', {
+    query: 'super_classISEMPTY', // no parent table = base table
+    fields: ['name'],
+    limit: 10_000,
+    signal,
+  });
+
+  const names = records
+    .map((record) => String(record.name))
+    .filter((name) => !SYS_ID_SEARCH_TABLES.includes(name))
+    .filter((name) => !SYS_ID_SCAN_SKIP_PREFIXES.some((prefix) => name.startsWith(prefix)));
+
+  // Platform tables (sys…) are the larger group and the less likely place for a record.
+  const isSystem = (name: string): boolean => name.startsWith('sys');
+  return [...names.filter((name) => !isSystem(name)), ...names.filter(isSystem)];
+}
+
+/** Stage 2: all remaining base tables, one batch (= one request) at a time. Esc cancels via ctx.signal. */
+async function findInOtherTables(ctx: CommandContext, sysId: string): Promise<string | null> {
+  otherBaseTables ??= await loadOtherBaseTables(ctx.api, ctx.signal);
+  const tables = otherBaseTables;
+
+  for (let done = 0; done < tables.length; done += SYS_ID_SCAN_BATCH_SIZE) {
+    ctx.ui.print(`Not in the common tables. Searching all tables… ${done} / ${tables.length} (Esc to cancel)`);
+    const batch = tables.slice(done, done + SYS_ID_SCAN_BATCH_SIZE);
+    const found = await ctx.api.findInTables(batch, sysId, { fields: FIELDS, signal: ctx.signal });
+    if (found) {
+      return realTable(found);
+    }
+  }
+  return null;
 }
 
 export const find: Command = {
@@ -49,9 +95,10 @@ export const find: Command = {
     }
 
     ctx.ui.print('Searching…');
-    const table = await findTable(ctx.api, sysId, ctx.signal);
+    const table =
+      (await findInCommonTables(ctx.api, sysId, ctx.signal)) ?? (await findInOtherTables(ctx, sysId));
     if (!table) {
-      throw new Error(`No record found for ${sysId} in: ${SYS_ID_SEARCH_TABLES.join(', ')}`);
+      throw new Error(`No record with sys_id ${sysId} was found in any table.`);
     }
 
     ctx.ui.close();
