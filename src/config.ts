@@ -67,7 +67,13 @@ export const SYS_ID_SCAN_SKIP_PREFIXES: readonly string[] = [
   'sys_audit',
   'sys_history',
   'sys_rollback',
+  'pa_scores', // Performance Analytics scores: can't be filtered by sys_id
 ];
+
+/** Where :find keeps the tables it found records in, per instance (chrome.storage.local). */
+export const FOUND_TABLES_STORAGE_KEY = 'snforge.foundTables';
+/** How many remembered tables to keep per instance; each one adds a request to stage 1. */
+export const FOUND_TABLES_MAX = 20;
 
 /** Maximum number of command suggestions shown in the palette. */
 export const MAX_SUGGESTIONS = 6;

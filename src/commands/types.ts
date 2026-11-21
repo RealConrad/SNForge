@@ -24,6 +24,11 @@ export interface CommandContext {
   };
   /** REST calls to the current instance, as the logged-in user. Pass `signal` along. */
   api: SnApi;
+  /** Tables where :find located records before on this instance, saved locally. */
+  foundTables: {
+    load(): Promise<string[]>;
+    remember(table: string): Promise<void>;
+  };
   /** Opens a new tab (same instance, or the docs URL). */
   openTab(url: string, active?: boolean): Promise<void>;
   /** Navigates the current tab. */

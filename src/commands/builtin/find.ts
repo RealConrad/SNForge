@@ -6,12 +6,13 @@ import { classicPageUrl } from '../urls';
 
 /*
  * ServiceNow has no "which table is this sys_id in?" API; you can only ask one table at
- * a time. Two things keep that fast:
+ * a time. Three things keep that fast:
  *
  * - A base table also answers for every table that extends it (`task` finds incidents,
  *   changes, …) and says which one in sys_class_name. So only base tables are asked.
- * - Stage 1 asks the few tables that hold most records, all at once. Only when that
- *   misses does stage 2 go through every other base table, in batches.
+ * - Stage 1 asks the tables that hold most records, all at once. Only when that misses
+ *   does stage 2 go through every other base table, in batches.
+ * - A table where stage 2 finds something is remembered and joins stage 1 from then on.
  */
 
 const FIELDS = ['sys_class_name'];
@@ -24,17 +25,22 @@ function realTable({ table, record }: FoundRecord): string {
   return typeof record.sys_class_name === 'string' && record.sys_class_name ? record.sys_class_name : table;
 }
 
-/** Stage 1: every common table at the same time; the first hit cancels the rest. */
-async function findInCommonTables(api: SnApi, sysId: string, signal: AbortSignal): Promise<string | null> {
+/** Stage 1: every one of `tables` at the same time; the first hit cancels the rest. */
+async function findInCommonTables(
+  api: SnApi,
+  tables: readonly string[],
+  sysId: string,
+  signal: AbortSignal,
+): Promise<FoundRecord | null> {
   const firstHit = new AbortController();
   const lookupSignal = AbortSignal.any([signal, firstHit.signal]);
 
-  const lookups = SYS_ID_SEARCH_TABLES.map(async (table) => {
+  const lookups = tables.map(async (table) => {
     const record = await api.getRecord(table, sysId, { fields: FIELDS, signal: lookupSignal });
     if (!record) {
       throw new Error(`Not in ${table}`);
     }
-    return realTable({ table, record });
+    return { table, record };
   });
 
   try {
@@ -48,10 +54,15 @@ async function findInCommonTables(api: SnApi, sysId: string, signal: AbortSignal
   }
 }
 
-/** Every base table of the instance that stage 1 didn't ask, business tables first. */
-async function loadOtherBaseTables(api: SnApi, signal: AbortSignal): Promise<string[]> {
+/** Every searchable base table of the instance except `alreadyAsked`, business tables first. */
+async function loadOtherBaseTables(
+  api: SnApi,
+  alreadyAsked: readonly string[],
+  signal: AbortSignal,
+): Promise<string[]> {
   const records = await api.getRecords('sys_db_object', {
-    query: 'super_classISEMPTY', // no parent table = base table
+    // No parent table = base table. Tables without web service access can't be queried at all.
+    query: 'super_classISEMPTY^ws_access=true',
     fields: ['name'],
     limit: 10_000,
     signal,
@@ -59,7 +70,7 @@ async function loadOtherBaseTables(api: SnApi, signal: AbortSignal): Promise<str
 
   const names = records
     .map((record) => String(record.name))
-    .filter((name) => !SYS_ID_SEARCH_TABLES.includes(name))
+    .filter((name) => !alreadyAsked.includes(name))
     .filter((name) => !SYS_ID_SCAN_SKIP_PREFIXES.some((prefix) => name.startsWith(prefix)));
 
   // Platform tables (sys…) are the larger group and the less likely place for a record.
@@ -68,8 +79,12 @@ async function loadOtherBaseTables(api: SnApi, signal: AbortSignal): Promise<str
 }
 
 /** Stage 2: all remaining base tables, one batch (= one request) at a time. Esc cancels via ctx.signal. */
-async function findInOtherTables(ctx: CommandContext, sysId: string): Promise<string | null> {
-  otherBaseTables ??= await loadOtherBaseTables(ctx.api, ctx.signal);
+async function findInOtherTables(
+  ctx: CommandContext,
+  alreadyAsked: readonly string[],
+  sysId: string,
+): Promise<FoundRecord | null> {
+  otherBaseTables ??= await loadOtherBaseTables(ctx.api, alreadyAsked, ctx.signal);
   const tables = otherBaseTables;
 
   for (let done = 0; done < tables.length; done += SYS_ID_SCAN_BATCH_SIZE) {
@@ -77,10 +92,26 @@ async function findInOtherTables(ctx: CommandContext, sysId: string): Promise<st
     const batch = tables.slice(done, done + SYS_ID_SCAN_BATCH_SIZE);
     const found = await ctx.api.findInTables(batch, sysId, { fields: FIELDS, signal: ctx.signal });
     if (found) {
-      return realTable(found);
+      return found;
     }
   }
   return null;
+}
+
+/** Runs both stages; a stage 2 hit is remembered so that table is in stage 1 next time. */
+async function findRecord(ctx: CommandContext, sysId: string): Promise<FoundRecord | null> {
+  const commonTables = [...SYS_ID_SEARCH_TABLES, ...(await ctx.foundTables.load())];
+
+  const quick = await findInCommonTables(ctx.api, commonTables, sysId, ctx.signal);
+  if (quick) {
+    return quick;
+  }
+
+  const found = await findInOtherTables(ctx, commonTables, sysId);
+  if (found) {
+    await ctx.foundTables.remember(found.table);
+  }
+  return found;
 }
 
 export const find: Command = {
@@ -95,13 +126,12 @@ export const find: Command = {
     }
 
     ctx.ui.print('Searching…');
-    const table =
-      (await findInCommonTables(ctx.api, sysId, ctx.signal)) ?? (await findInOtherTables(ctx, sysId));
-    if (!table) {
+    const found = await findRecord(ctx, sysId);
+    if (!found) {
       throw new Error(`No record with sys_id ${sysId} was found in any table.`);
     }
 
     ctx.ui.close();
-    ctx.navigate(classicPageUrl(`/${encodeURIComponent(table)}.do?sys_id=${sysId}`, ctx.urlOptions));
+    ctx.navigate(classicPageUrl(`/${encodeURIComponent(realTable(found))}.do?sys_id=${sysId}`, ctx.urlOptions));
   },
 };

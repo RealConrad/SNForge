@@ -48,6 +48,9 @@ and opens the record.
   can take from a few seconds to a minute; the palette shows the progress, and `Esc`
   cancels.
 
+When the slower search finds a record, SNForge remembers that table for the instance,
+so the next sys_id from the same table is found straight away.
+
 Tables that don't allow web service access can't be searched.
 
 ## Commands

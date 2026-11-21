@@ -1,5 +1,6 @@
 import { grantedSession } from '../content/access';
 import { toggleFieldNames } from '../content/field-names';
+import { loadFoundTables, rememberFoundTable } from '../content/found-tables';
 import { isNextExperience, navigate, openTab } from '../content/navigation';
 import { createSnApi } from '../shared/sn-api';
 import type { CommandContext } from './types';
@@ -12,6 +13,7 @@ export function createCommandContext(ui: CommandContext['ui'], signal: AbortSign
     signal,
     ui,
     api: createSnApi(grantedSession().token),
+    foundTables: { load: loadFoundTables, remember: rememberFoundTable },
     openTab,
     navigate,
     toggleFieldNames,

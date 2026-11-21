@@ -12,7 +12,8 @@ possible.
   show the palette and to call the instance's own REST API as you.
 - Navigate the current tab, or open a new tab, **on the same instance** (plus the
   documentation link).
-- Store your theme choice locally.
+- Store your theme choice locally, and the names of tables the sys_id search found
+  records in (per instance), to make later searches faster.
 
 ## What SNForge cannot and does not do
 
