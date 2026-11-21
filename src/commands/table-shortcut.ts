@@ -31,7 +31,7 @@ const VIEW_SUFFIXES: Readonly<Record<string, TableView>> = {
 };
 
 /** ServiceNow table names: lowercase letters, digits and underscores. */
-const TABLE_NAME = /^[a-z][a-z0-9_]*$/;
+export const TABLE_NAME =/^[a-z][a-z0-9_]*$/;
 
 /**
  * Parses palette input as a table shortcut. Returns null when the input isn't one

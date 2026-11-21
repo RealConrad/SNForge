@@ -18,13 +18,16 @@ export function instanceUrl(path: string, origin: string): string {
   return url.toString();
 }
 
+/** Next Experience shows a classic page at this path + the encoded classic path. */
+export const CLASSIC_TARGET_PREFIX = '/now/nav/ui/classic/params/target/';
+
 /**
  * Absolute URL for a classic page path such as "/incident_list.do?sysparm_query=…".
  * Under Next Experience the path becomes one encoded segment of the Polaris shell URL.
  */
 export function classicPageUrl(path: string, { origin, nextExperience }: UrlOptions): string {
   const target = nextExperience
-    ? `/now/nav/ui/classic/params/target/${encodeURIComponent(path.replace(/^\//, ''))}`
+    ? `${CLASSIC_TARGET_PREFIX}${encodeURIComponent(path.replace(/^\//, ''))}`
     : path;
   return instanceUrl(target, origin);
 }

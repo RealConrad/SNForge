@@ -63,6 +63,9 @@ Commands start with `:`.
 | `:nav` (`:navbar`, `:shell`, `:polaris`) | Reload the current classic page inside the Next Experience navigation |
 | `:fd` (`:flow`, `:flowdesigner`) | Open Flow Designer in a new tab |
 | `:st` (`:studio`) | Open ServiceNow Studio in a new tab |
+| `:br [table]` (`:rules`, `:businessrules`) | Open the business rules of a table in a new tab. Without a table: the classic form or list you are on |
+| `:cs [table]` (`:clientscripts`) | Open the client scripts of a table in a new tab. Without a table: the classic form or list you are on |
+| `:log` (`:logs`, `:syslog`) | Open today's system log in a new tab |
 | `:find <sys_id>` (`:sysid`, `:id`) | Open the record with that sys_id. Pasting a sys_id on its own does the same |
 | `:lang <code>` (`:language`, `:locale`) | Change your session language, e.g. `:lang de` for German or `:lang fr` for French. The code must be a language installed on the instance; a wrong code shows the available ones |
 | `:names` (`:fields`, `:tn`, `:technical`) | Show the technical name of every field under its label on a classic form or list; run again to hide |
