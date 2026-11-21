@@ -1,3 +1,4 @@
+import type { SnApi } from '../shared/sn-api';
 import type { UrlOptions } from './urls';
 
 export type OutputKind = 'info' | 'error' | 'success';
@@ -21,6 +22,8 @@ export interface CommandContext {
     clear(): void;
     close(): void;
   };
+  /** REST calls to the current instance, as the logged-in user. Pass `signal` along. */
+  api: SnApi;
   /** Opens a new tab (same instance, or the docs URL). */
   openTab(url: string, active?: boolean): Promise<void>;
   /** Navigates the current tab. */
