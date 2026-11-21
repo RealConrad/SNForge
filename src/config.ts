@@ -20,6 +20,9 @@ export const DOCS_URL = 'https://github.com/RealConrad/SNForge#readme';
 /** How long the content script waits for the page bridge to answer. */
 export const BRIDGE_TIMEOUT_MS = 2_000;
 
+/** How long the "palette can't open" notice stays on screen. */
+export const NOTICE_DURATION_MS = 4_000;
+
 /** Maximum number of command suggestions shown in the palette. */
 export const MAX_SUGGESTIONS = 6;
 

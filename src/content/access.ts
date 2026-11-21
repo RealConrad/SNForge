@@ -3,7 +3,14 @@ import type { SessionInfo } from '../shared/messages';
 import { createSnApi } from '../shared/sn-api';
 import { BridgeTimeoutError, getSession } from './bridge-client';
 
-let accessPromise: Promise<boolean> | undefined;
+/**
+ * - granted:     the user has the required role(s); the palette may open.
+ * - denied:      the user is logged in but lacks the role(s).
+ * - unavailable: no session could be read (not logged in, or the bridge didn't answer).
+ */
+export type Access = 'granted' | 'denied' | 'unavailable';
+
+let accessPromise: Promise<Access> | undefined;
 /** The session that passed the gate; commands use its token for REST calls. */
 let session: SessionInfo | undefined;
 
@@ -26,31 +33,32 @@ async function lookupRoles(user: SessionInfo): Promise<string[]> {
   }
 }
 
-async function checkAccess(): Promise<boolean> {
+async function checkAccess(): Promise<Access> {
   const user = await getSession();
   if (!user) {
-    return false;
+    return 'unavailable';
   }
 
   const allowed =
     hasRequiredRoles(user.roles) || hasRequiredRoles([...user.roles, ...(await lookupRoles(user))]);
-  if (allowed) {
-    session = user;
+  if (!allowed) {
+    return 'denied';
   }
-  return allowed;
+  session = user;
+  return 'granted';
 }
 
 /**
  * Resolves whether the current user may use SNForge. This is the ONLY permission check:
- * once it passes, every palette feature is available. The answer is cached for the page
- * lifetime, except when the bridge timed out — then the next call retries.
+ * once it is granted, every palette feature is available. The answer is cached for the
+ * page lifetime, except when the bridge timed out — then the next call retries.
  */
-export function isAccessAllowed(): Promise<boolean> {
-  accessPromise ??= checkAccess().catch((error: unknown) => {
+export function getAccess(): Promise<Access> {
+  accessPromise ??= checkAccess().catch((error: unknown): Access => {
     if (error instanceof BridgeTimeoutError) {
       accessPromise = undefined;
     }
-    return false;
+    return 'unavailable';
   });
   return accessPromise;
 }

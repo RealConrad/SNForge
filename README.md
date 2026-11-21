@@ -15,6 +15,9 @@ page, type a table name or command, press Enter.
 
 The palette only appears for users with the `admin` role, on `https://*.service-now.com`.
 
+SNForge is for ServiceNow admins. If you press the shortcut without the `admin` role, a
+short message tells you so and the palette stays closed.
+
 ## Opening tables
 
 Type a table name. **Lowercase opens in the current tab; any uppercase letter opens a

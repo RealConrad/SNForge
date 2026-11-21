@@ -1,0 +1,33 @@
+:host {
+  all: initial;
+  position: fixed;
+  top: 14vh; /* where the palette would have opened */
+  left: 50%;
+  z-index: 2147483646;
+  transform: translateX(-50%);
+}
+
+.notice {
+  max-width: min(480px, calc(100vw - 32px));
+  padding: 10px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font: 13px/1.45 Inter, "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  box-shadow: 0 12px 32px -8px rgb(0 0 0 / 60%);
+  animation: notice-enter 160ms ease-out both;
+}
+
+@keyframes notice-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notice {
+    animation: none;
+  }
+}
