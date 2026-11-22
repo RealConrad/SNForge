@@ -1,7 +1,7 @@
 import { ACCESS } from '../config';
 import type { SessionInfo } from '../shared/messages';
 import { createSnApi } from '../shared/sn-api';
-import { BridgeTimeoutError, getSession } from './bridge-client';
+import { getSession } from './bridge-client';
 
 /**
  * - granted:     the user has the required role(s); the palette may open.
@@ -35,7 +35,9 @@ async function lookupRoles(user: SessionInfo): Promise<string[]> {
 
 async function checkAccess(): Promise<Access> {
   const user = await getSession();
-  if (!user) {
+  // No token (g_ck not found on the page) means every REST call would be rejected, so
+  // that is "no usable session" too, not a palette whose commands all fail.
+  if (!user?.token) {
     return 'unavailable';
   }
 
@@ -51,15 +53,18 @@ async function checkAccess(): Promise<Access> {
 /**
  * Resolves whether the current user may use SNForge. This is the ONLY permission check:
  * once it is granted, every palette feature is available. The answer is cached for the
- * page lifetime, except when the bridge timed out — then the next call retries.
+ * page lifetime once it is granted or denied. 'unavailable' is not cached: the page may
+ * simply not have finished loading its session yet, so the next call checks again.
  */
 export function getAccess(): Promise<Access> {
-  accessPromise ??= checkAccess().catch((error: unknown): Access => {
-    if (error instanceof BridgeTimeoutError) {
-      accessPromise = undefined;
-    }
-    return 'unavailable';
-  });
+  accessPromise ??= checkAccess()
+    .catch((): Access => 'unavailable') // the bridge timed out
+    .then((access) => {
+      if (access === 'unavailable') {
+        accessPromise = undefined;
+      }
+      return access;
+    });
   return accessPromise;
 }
 

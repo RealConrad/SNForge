@@ -66,9 +66,44 @@ Commands start with `:`.
 | `:br [table]` (`:rules`, `:businessrules`) | Open the business rules of a table in a new tab. Without a table: the classic form or list you are on |
 | `:cs [table]` (`:clientscripts`) | Open the client scripts of a table in a new tab. Without a table: the classic form or list you are on |
 | `:log` (`:logs`, `:syslog`) | Open today's system log in a new tab |
+| `:edit` (`:fieldedit`, `:unlock`) | Turn field edit on: triple-click a read-only field on a classic form to change its value. Run again to turn it off |
 | `:find <sys_id>` (`:sysid`, `:id`) | Open the record with that sys_id. Pasting a sys_id on its own does the same |
 | `:lang <code>` (`:language`, `:locale`) | Change your session language, e.g. `:lang de` for German or `:lang fr` for French. The code must be a language installed on the instance; a wrong code shows the available ones |
 | `:names` (`:fields`, `:tn`, `:technical`) | Show the technical name of every field under its label on a classic form or list; run again to hide |
+
+## Editing a read-only field
+
+Sometimes an admin needs to correct a field the form won't let them change.
+
+1. Open the record in a classic form and run `:edit`. A notice confirms field edit is on.
+2. Triple-click the read-only field (or its label). A small editor opens with the stored
+   value: plain text, a sys_id for reference fields, the value (not the label) for choices.
+3. Change it and press **Save** (`Ctrl+Enter`). `Esc` cancels. Nothing is written before
+   you save.
+
+The form reloads with the new value, which also turns field edit off again. Only that
+one field is saved; other unsaved changes on the form are lost by the reload.
+
+By default the value is written through ServiceNow's Table API as you: UI policies and
+client scripts that lock the field don't apply, but **ACLs and business rules do**. Many
+"read-only" fields are protected by an ACL, so a plain save won't change them — the
+editor will tell you to use Force.
+
+### Force update
+
+The editor has three checkboxes for when a plain save won't do it:
+
+- **Force update** — runs the save as a background script (as you, an admin), which
+  ignores ACLs and read-only. This is the same power as pasting a `GlideRecord` update
+  into **Scripts - Background**; it needs the role that lets you run background scripts.
+- **…and skip business rules** — adds `setWorkflow(false)`: no business rules, flows or
+  notifications fire for the change.
+- **…and keep Updated / Updated by** — adds `autoSysFields(false)`.
+
+The last two only take effect when Force is ticked. Use Force deliberately: it writes
+straight to the record and skips the checks that normally protect it.
+
+New records must be saved once first, and workspace forms are not supported.
 
 ## Themes
 

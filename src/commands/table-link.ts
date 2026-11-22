@@ -16,15 +16,36 @@ interface TableLink {
 /** A classic form or list path: "/incident.do?…" or "/incident_list.do?…". */
 const CLASSIC_PAGE = /^\/?([a-z][a-z0-9_]*?)(?:_list)?\.do(?:\?|$)/;
 
+/** UI16 shows a classic page in a frame at this path; the page itself is in the `uri` parameter. */
+const UI16_FRAME_PATH = '/nav_to.do';
+
+/** "*.do" pages that look like a table's form but are not one. */
+const NOT_TABLES: ReadonlySet<string> = new Set(['nav_to', 'navpage', 'home']);
+
+/**
+ * The classic page `currentPath` shows: itself, or the page wrapped by the Next
+ * Experience shell or the UI16 frame. Undefined when the wrapped path can't be read.
+ */
+function classicPathOf(currentPath: string): string | undefined {
+  try {
+    if (currentPath.startsWith(CLASSIC_TARGET_PREFIX)) {
+      return decodeURIComponent(currentPath.slice(CLASSIC_TARGET_PREFIX.length));
+    }
+    // The base is only there so a path can be parsed; it is never requested.
+    const url = new URL(currentPath, 'https://instance.invalid');
+    return url.pathname === UI16_FRAME_PATH ? (url.searchParams.get('uri') ?? undefined) : currentPath;
+  } catch {
+    return undefined; // malformed encoding
+  }
+}
+
 /**
  * The table of the classic form or list at `currentPath`, also when it is shown inside
- * Next Experience. Undefined on other pages (workspaces, Flow Designer, …).
+ * Next Experience or the UI16 frame. Undefined on other pages (workspaces, Flow Designer, …).
  */
 export function tableOfPage(currentPath: string): string | undefined {
-  const path = currentPath.startsWith(CLASSIC_TARGET_PREFIX)
-    ? decodeURIComponent(currentPath.slice(CLASSIC_TARGET_PREFIX.length))
-    : currentPath;
-  return CLASSIC_PAGE.exec(path)?.[1];
+  const table = CLASSIC_PAGE.exec(classicPathOf(currentPath) ?? '')?.[1];
+  return table && !NOT_TABLES.has(table) ? table : undefined;
 }
 
 /**

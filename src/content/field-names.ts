@@ -5,10 +5,11 @@
  *   Short description
  *   (short_description)
  *
- * Classic pages may sit in the `gsft_main` iframe, which Next Experience nests inside
- * several shadow roots, so we search the top document, open shadow roots and same-origin
- * iframes. Workspace / Next Experience native forms are not classic DOM and are not covered.
+ * Every document of the page is searched (see documents.ts). Workspace / Next Experience
+ * native forms are not classic DOM and are not covered.
  */
+
+import { collectDocuments } from './documents';
 
 /** Marks the elements we add, so a second run can find and remove them. */
 const MARKER = 'data-snforge-field-name';
@@ -27,31 +28,6 @@ const PILL_STYLE = [
   'white-space: nowrap',
   'user-select: all', // one click selects the whole name for copying
 ].join('; ');
-
-/** tagName, not instanceof: elements in another frame belong to that frame's classes. */
-function isIframe(element: Element): element is HTMLIFrameElement {
-  return element.tagName === 'IFRAME';
-}
-
-/** Adds the document of every same-origin iframe under `root` to `found`. */
-function findFrameDocuments(root: Document | ShadowRoot, found: Document[]): void {
-  for (const element of root.querySelectorAll('*')) {
-    if (element.shadowRoot) {
-      findFrameDocuments(element.shadowRoot, found);
-    } else if (isIframe(element) && element.contentDocument) {
-      // contentDocument is null for cross-origin frames.
-      found.push(element.contentDocument);
-      findFrameDocuments(element.contentDocument, found);
-    }
-  }
-}
-
-/** The top document plus every same-origin iframe document, however deeply nested. */
-function collectDocuments(): Document[] {
-  const found = [document];
-  findFrameDocuments(document, found);
-  return found;
-}
 
 /**
  * A block row holding the pill, so it sits on its own line and follows the label's

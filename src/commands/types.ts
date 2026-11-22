@@ -40,6 +40,11 @@ export interface CommandContext {
    * Returns how many were added or removed; 0 means the page has no classic form or list.
    */
   toggleFieldNames(): number;
+  /**
+   * Turns field edit mode on or off (triple-click a read-only form field to change it).
+   * Returns false when the page has no classic form.
+   */
+  toggleFieldEdit(): boolean;
 }
 
 export interface Command {

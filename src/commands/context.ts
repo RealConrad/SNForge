@@ -1,4 +1,5 @@
 import { grantedSession } from '../content/access';
+import { toggleFieldEdit } from '../content/field-edit';
 import { toggleFieldNames } from '../content/field-names';
 import { loadFoundTables, rememberFoundTable } from '../content/found-tables';
 import { isNextExperience, navigate, openTab } from '../content/navigation';
@@ -17,5 +18,6 @@ export function createCommandContext(ui: CommandContext['ui'], signal: AbortSign
     openTab,
     navigate,
     toggleFieldNames,
+    toggleFieldEdit,
   };
 }

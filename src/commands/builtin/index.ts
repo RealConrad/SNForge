@@ -1,6 +1,7 @@
 import { registerCommand } from '../registry';
 import { br } from './br';
 import { cs } from './cs';
+import { edit } from './edit';
 import { fd } from './fd';
 import { find } from './find';
 import { help } from './help';
@@ -22,4 +23,5 @@ export function registerBuiltins(): void {
   registerCommand(br);
   registerCommand(cs);
   registerCommand(log);
+  registerCommand(edit);
 }

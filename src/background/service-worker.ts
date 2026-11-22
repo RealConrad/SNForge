@@ -1,5 +1,10 @@
 import { DOCS_URL } from '../config';
-import { TOGGLE_PALETTE_COMMAND, isTabOpenMessage, type PaletteToggleMessage } from '../shared/messages';
+import {
+  TOGGLE_PALETTE_COMMAND,
+  isTabOpenMessage,
+  type PaletteToggleMessage,
+  type TabOpenResponse,
+} from '../shared/messages';
 
 function isServiceNowUrl(value: string | undefined): boolean {
   if (!value) {
@@ -72,15 +77,29 @@ function senderOrigin(sender: chrome.runtime.MessageSender): string | undefined 
   }
 }
 
-chrome.runtime.onMessage.addListener((message: unknown, sender) => {
-  if (!isTabOpenMessage(message) || !sender.tab || !isAllowedTabUrl(message.url, senderOrigin(sender))) {
+/**
+ * Every tab/open message gets a TabOpenResponse, so the content script can tell the user
+ * when nothing was opened instead of closing the palette as if it had worked.
+ */
+chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse: (response: TabOpenResponse) => void) => {
+  if (!isTabOpenMessage(message)) {
+    return;
+  }
+  if (!sender.tab || !isAllowedTabUrl(message.url, senderOrigin(sender))) {
+    sendResponse({ ok: false });
     return;
   }
 
-  void chrome.tabs.create({
-    url: message.url,
-    active: message.active ?? true,
-    index: sender.tab.index + 1,
-    windowId: sender.tab.windowId,
-  });
+  chrome.tabs
+    .create({
+      url: message.url,
+      active: message.active ?? true,
+      index: sender.tab.index + 1,
+      windowId: sender.tab.windowId,
+    })
+    .then(
+      () => sendResponse({ ok: true }),
+      () => sendResponse({ ok: false }),
+    );
+  return true; // the response is sent after the tab is created
 });

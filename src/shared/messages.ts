@@ -13,6 +13,9 @@ export type PaletteToggleMessage = { type: 'palette/toggle' };
 /** Content script → service worker: open `url` in a new tab next to the sender's. */
 export type TabOpenMessage = { type: 'tab/open'; url: string; active?: boolean };
 
+/** Service worker's answer to a TabOpenMessage: false when the URL was refused or the tab couldn't be created. */
+export type TabOpenResponse = { ok: boolean };
+
 export type RuntimeMessage = PaletteToggleMessage | TabOpenMessage;
 
 export interface SessionInfo {
@@ -47,6 +50,10 @@ export function isTabOpenMessage(value: unknown): value is TabOpenMessage {
     value.type === 'tab/open' &&
     typeof value.url === 'string' &&
     (value.active === undefined || typeof value.active === 'boolean');
+}
+
+export function isTabOpenResponse(value: unknown): value is TabOpenResponse {
+  return isRecord(value) && typeof value.ok === 'boolean';
 }
 
 export function isBridgeRequest(value: unknown): value is BridgeRequest {
