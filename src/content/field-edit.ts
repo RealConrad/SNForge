@@ -109,7 +109,9 @@ async function saveValue(
   if (stored === oldValue && value !== oldValue) {
     throw new Error(
       force
-        ? 'The value did not change; a data policy or dictionary constraint may be blocking it.'
+        ? // Force already bypasses ACLs and read-only, so what is left is the value itself:
+          // GlideRecord drops a value the field's type can't hold (text in an integer field).
+          `ServiceNow did not accept this value for ${field.table}.${field.name}. It probably does not fit the field type (for example text in a number or date field). A data policy can also block it.`
         : 'ServiceNow kept the old value. Tick "Force update" to bypass ACLs and business rules.',
     );
   }
