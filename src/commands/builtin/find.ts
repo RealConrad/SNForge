@@ -100,7 +100,7 @@ async function findInOtherTables(
 
 /** Runs both stages; a stage 2 hit is remembered so that table is in stage 1 next time. */
 async function findRecord(ctx: CommandContext, sysId: string): Promise<FoundRecord | null> {
-  const commonTables = [...SYS_ID_SEARCH_TABLES, ...(await ctx.foundTables.load())];
+  const commonTables = [...SYS_ID_SEARCH_TABLES, ...(await ctx.storage.foundTables.load())];
 
   const quick = await findInCommonTables(ctx.api, commonTables, sysId, ctx.signal);
   if (quick) {
@@ -109,7 +109,7 @@ async function findRecord(ctx: CommandContext, sysId: string): Promise<FoundReco
 
   const found = await findInOtherTables(ctx, commonTables, sysId);
   if (found) {
-    await ctx.foundTables.remember(found.table);
+    await ctx.storage.foundTables.remember(found.table);
   }
   return found;
 }

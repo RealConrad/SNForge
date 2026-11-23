@@ -1,5 +1,4 @@
 import { registerBuiltins } from '../../commands/builtin';
-import { createCommandContext } from '../../commands/context';
 import { findCommand, matchCommands } from '../../commands/registry';
 import { runCommandInput } from '../../commands/runner';
 import {
@@ -14,6 +13,7 @@ import { el } from '../../shared/dom';
 import { isSysId } from '../../shared/sys-id';
 import { getSavedTheme, onThemeChanged } from '../../shared/theme';
 import themes from '../../shared/themes.css';
+import { createCommandContext } from '../command-context';
 import { isNextExperience, navigate, openTab } from '../navigation';
 import styles from './palette.css';
 

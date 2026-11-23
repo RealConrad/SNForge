@@ -6,7 +6,7 @@ export const edit: Command = {
   description: 'Turn field edit on or off: triple-click a form field to change its value',
   usage: 'edit',
   run(ctx) {
-    if (!ctx.toggleFieldEdit()) {
+    if (!ctx.page.toggleFieldEdit()) {
       throw new Error('No classic form found on this page');
     }
     ctx.ui.close();
