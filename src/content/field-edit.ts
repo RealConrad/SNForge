@@ -24,8 +24,8 @@ const SKIP_BUSINESS_RULES = 'noBR';
 const KEEP_SYSTEM_FIELDS = 'noSys';
 const TOGGLES: EditorToggle[] = [
   { key: FORCE, label: 'Force update — run as admin, ignore ACLs and read-only' },
-  { key: SKIP_BUSINESS_RULES, label: '…and skip business rules (setWorkflow false)' },
-  { key: KEEP_SYSTEM_FIELDS, label: '…and keep Updated / Updated by (autoSysFields false)' },
+  { key: SKIP_BUSINESS_RULES, label: 'Skip business rules (setWorkflow false)' },
+  { key: KEEP_SYSTEM_FIELDS, label: 'Do not update the fields "Updated / Updated by" (autoSysFields false)' },
 ];
 
 /** One field of the record a form shows. */
