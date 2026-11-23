@@ -1,33 +1,13 @@
 import { registerBuiltins } from '../../commands/builtin';
-import { findCommand, matchCommands } from '../../commands/registry';
 import { runCommandInput } from '../../commands/runner';
-import {
-  describeTableShortcut,
-  parseTableShortcut,
-  tableShortcutUrl,
-  type TableShortcut,
-} from '../../commands/table-shortcut';
+import { tableShortcutUrl, type TableShortcut } from '../../commands/table-shortcut';
 import type { Command, CommandContext, OutputKind } from '../../commands/types';
-import { MAX_SUGGESTIONS, SUGGESTED_INPUTS } from '../../config';
 import { el } from '../../shared/dom';
-import { isSysId } from '../../shared/sys-id';
-import { getSavedTheme, onThemeChanged } from '../../shared/theme';
-import themes from '../../shared/themes.css';
 import { createCommandContext } from '../command-context';
 import { isNextExperience, navigate, openTab } from '../navigation';
+import { buildItems, type ItemActions, type PaletteItem } from './palette-items';
 import styles from './palette.css';
-
-/** One row in the suggestion list. */
-interface PaletteItem {
-  icon: string;
-  title: string;
-  description: string;
-  hint: string;
-  /** Enter / click. */
-  accept(): void;
-  /** Text Tab puts into the input; undefined when Tab has nothing to complete. */
-  completion?: string;
-}
+import { mountShadow } from './shadow-host';
 
 interface PaletteUi {
   host: HTMLDivElement;
@@ -127,108 +107,8 @@ function completeCommand(command: Command): void {
   renderSuggestions();
 }
 
-// ---------- Building the item list ----------
-
-function tableItem(shortcut: TableShortcut): PaletteItem {
-  const { title, detail } = describeTableShortcut(shortcut);
-  return {
-    icon: shortcut.newTab ? '↗' : '→',
-    title,
-    description: detail,
-    hint: shortcut.newTab ? 'new tab' : '',
-    accept: () => runTableShortcut(shortcut),
-  };
-}
-
-/** A pasted sys_id runs :find, so there is one code path for the search. */
-function sysIdItem(sysId: string): PaletteItem {
-  return {
-    icon: '#',
-    title: `Find record: ${sysId}`,
-    description: 'Search by sys_id and open the record',
-    hint: '',
-    accept: () => runCommand(`:find ${sysId}`),
-  };
-}
-
-function commandItem(command: Command, typedName: string, input: string): PaletteItem {
-  const isExact = findCommand(typedName) === command;
-  return {
-    icon: ':',
-    title: `:${command.name}`,
-    description: command.description,
-    hint: '',
-    // A fully typed name runs; a partial one completes first.
-    accept: () => (isExact ? runCommand(input) : completeCommand(command)),
-    completion: `:${command.name} `,
-  };
-}
-
-/** The item a suggested input ("incident", ":nav") stands for, as if it had been typed. */
-function suggestedItem(text: string): PaletteItem | undefined {
-  if (text.startsWith(':')) {
-    const name = text.slice(1).toLowerCase();
-    const command = findCommand(name);
-    return command ? commandItem(command, name, text) : undefined;
-  }
-  const shortcut = parseTableShortcut(text);
-  return shortcut ? tableItem(shortcut) : undefined;
-}
-
-/**
- * Suggested inputs containing what was typed (all of them for empty input).
- * Typing in uppercase ("INC") keeps the new-tab meaning by uppercasing the suggestion.
- */
-function suggestedItems(trimmed: string): PaletteItem[] {
-  if (/\s/.test(trimmed)) {
-    return []; // arguments typed: the user is past picking a suggestion
-  }
-  const needle = trimmed.toLowerCase();
-  const newTab = trimmed !== needle;
-
-  return SUGGESTED_INPUTS.filter((text) => text.toLowerCase().includes(needle))
-    .map((text) => suggestedItem(newTab ? text.toUpperCase() : text))
-    .filter((item): item is PaletteItem => item !== undefined);
-}
-
-function buildItems(input: string): PaletteItem[] {
-  const trimmed = input.trim();
-  if (!trimmed) {
-    return suggestedItems('').slice(0, MAX_SUGGESTIONS);
-  }
-
-  // A sys_id is unambiguous (and also looks like a table name), so it is the only item.
-  if (isSysId(trimmed.toLowerCase())) {
-    return [sysIdItem(trimmed.toLowerCase())];
-  }
-
-  const typedName = (trimmed.replace(/^:/, '').split(/\s+/, 1)[0] ?? '').toLowerCase();
-
-  // Commands come first: the exact match ("help"), then every name or alias that
-  // starts with what was typed ("nam" → :names).
-  const exact = findCommand(typedName);
-  const partial = matchCommands(typedName).filter((command) => command !== exact);
-  const commands = exact ? [exact, ...partial] : partial;
-
-  const items = uniqueByTitle([
-    ...commands.map((command) => commandItem(command, typedName, trimmed)),
-    ...suggestedItems(trimmed),
-  ]);
-
-  // The typed text as a table name is the fallback, so it goes last, and it always
-  // keeps its place in the list however many other matches there are.
-  const shortcut = parseTableShortcut(trimmed);
-  if (!shortcut) {
-    return items.slice(0, MAX_SUGGESTIONS);
-  }
-  return uniqueByTitle([...items.slice(0, MAX_SUGGESTIONS - 1), tableItem(shortcut)]);
-}
-
-/** Suggestions overlap with the typed shortcut / command matches; keep the first of each. */
-function uniqueByTitle(items: PaletteItem[]): PaletteItem[] {
-  const seen = new Set<string>();
-  return items.filter((item) => !seen.has(item.title) && seen.add(item.title));
-}
+/** What accepting a suggestion does (see palette-items.ts). */
+const itemActions: ItemActions = { runCommand, completeCommand, runTableShortcut };
 
 // ---------- Rendering ----------
 
@@ -283,7 +163,7 @@ function renderSuggestions(): void {
   }
 
   const input = ui.input.value;
-  state.items = buildItems(input);
+  state.items = buildItems(input, itemActions);
   state.options = state.items.map(createOption);
 
   if (state.options.length) {
@@ -432,18 +312,11 @@ function createInput(listId: string): HTMLInputElement {
 }
 
 function createPalette(): PaletteUi {
-  const host = el('div');
-  host.setAttribute('data-snforge', '');
-  // Closed: page scripts cannot reach the palette's DOM through host.shadowRoot.
-  const shadow = host.attachShadow({ mode: 'closed' });
-
   const panel = el('section', 'palette');
-  panel.dataset.theme = '';
   panel.setAttribute('role', 'dialog');
   panel.setAttribute('aria-label', 'SNForge command palette');
   panel.addEventListener('keydown', onPanelKeyDown);
   panel.addEventListener('pointerdown', (event) => event.stopPropagation());
-  host.addEventListener('pointerdown', onBackdropPointerDown);
 
   const list = el('div', 'suggestions');
   list.id = 'snforge-suggestions';
@@ -460,19 +333,12 @@ function createPalette(): PaletteUi {
   output.setAttribute('role', 'status');
   output.hidden = true;
 
-  const style = el('style');
-  style.textContent = `${themes}\n${styles}`;
   panel.append(promptRow, output, list, createFooter());
-  shadow.append(style, panel);
-  document.documentElement.append(host);
 
+  const host = mountShadow(styles, panel);
+  host.setAttribute('data-snforge', '');
+  host.addEventListener('pointerdown', onBackdropPointerDown);
   document.addEventListener('keydown', onDocumentKeyDown, true);
-  void getSavedTheme().then((theme) => {
-    panel.dataset.theme = theme;
-  });
-  onThemeChanged((theme) => {
-    panel.dataset.theme = theme;
-  });
 
   return { host, panel, input, output, list };
 }
