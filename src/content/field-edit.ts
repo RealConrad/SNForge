@@ -11,6 +11,7 @@ import { createSnApi, type SnApi } from '../shared/sn-api';
 import { isSysId } from '../shared/sys-id';
 import { grantedSession } from './access';
 import { collectDocuments } from './documents';
+import { forceUpdateField } from './force-update';
 import { openFieldEditor, type EditorToggle } from './ui/field-editor';
 import { showNotice } from './ui/notice';
 
@@ -95,7 +96,7 @@ async function saveValue(
 ): Promise<void> {
   const force = checked.has(FORCE);
   const stored = force
-    ? await api.forceUpdateField(field.table, field.sysId, field.name, value, {
+    ? await forceUpdateField(api, field.table, field.sysId, field.name, value, {
         skipBusinessRules: checked.has(SKIP_BUSINESS_RULES),
         keepSystemFields: checked.has(KEEP_SYSTEM_FIELDS),
       })

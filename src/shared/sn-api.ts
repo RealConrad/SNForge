@@ -2,6 +2,9 @@
  * ServiceNow REST helper. Runs in the content script with relative URLs, so requests
  * only ever go to the current instance and the browser attaches the session cookie;
  * the CSRF token goes in X-UserToken.
+ *
+ * Only general-purpose calls live here. What one feature does with them (the script
+ * :edit runs, the endpoint :lang calls) is kept next to that feature.
  */
 
 import { isSysId } from './sys-id';
@@ -26,12 +29,11 @@ export interface GetRecordsOptions {
   signal?: AbortSignal;
 }
 
-/** GlideRecord flags for a forced update. Both default to false (normal behaviour). */
-export interface ForceUpdateOptions {
-  /** setWorkflow(false): skip business rules, flows and notifications. */
-  skipBusinessRules?: boolean;
-  /** autoSysFields(false): leave sys_updated_on / sys_updated_by as they are. */
-  keepSystemFields?: boolean;
+export interface RequestOptions {
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+  /** Sent as JSON. */
+  body?: unknown;
+  signal?: AbortSignal;
 }
 
 /** Where a record was found: the table that was asked, and the record itself. */
@@ -60,45 +62,28 @@ export interface SnApi {
    */
   updateField(table: string, sysId: string, field: string, value: string, signal?: AbortSignal): Promise<unknown>;
   /**
-   * Writes one field by running a GlideRecord update as a background script, which
-   * ignores ACLs and read-only, so it can set fields the Table API refuses. Returns the
-   * value the record has afterwards (read back over REST), for the caller to compare.
-   * This runs server-side script as the user; only call it on an explicit user action.
+   * Any other JSON endpoint of the instance: sends the request and returns the `result`
+   * of ServiceNow's { result: … } envelope. `path` is a path on this instance
+   * ("/api/…"); anything else is refused.
    */
-  forceUpdateField(
-    table: string,
-    sysId: string,
-    field: string,
-    value: string,
-    options?: ForceUpdateOptions,
-    signal?: AbortSignal,
-  ): Promise<unknown>;
-  /** Switches the current session to `language` (a sys_language id such as "de"). */
-  setSessionLanguage(language: string, signal?: AbortSignal): Promise<void>;
+  request(path: string, options?: RequestOptions): Promise<unknown>;
+  /**
+   * Runs `script` on the server through Scripts - Background, as the user. It ignores
+   * ACLs, so only call it on an explicit user action and never with source built by
+   * concatenating page input. The HTML output isn't returned (its shape varies by
+   * version); callers confirm the effect some other way.
+   */
+  runBackgroundScript(script: string, signal?: AbortSignal): Promise<void>;
 }
 
 /** Scripts - Background processor. Not a REST API, but same-origin, so the cookie + CSRF token are enough. */
 const SCRIPT_ENDPOINT = '/sys.scripts.do';
 
-/** Table and field names in script source must be plain identifiers. */
-const IDENTIFIER = /^[a-z][a-z0-9_]*$/;
-
 /**
- * A GlideRecord update, as background-script source. Every value goes in through
- * JSON.stringify, so a value with quotes or newlines is a safe JS string literal and
- * can't extend the script.
+ * A path on this instance: one leading slash. "//host/…" and "/\host/…" would be read
+ * as another host, and the request (with the session token) would go there.
  */
-function buildUpdateScript(table: string, sysId: string, field: string, value: string, options: ForceUpdateOptions): string {
-  const lines = [`var gr = new GlideRecord(${JSON.stringify(table)});`, `if (gr.get(${JSON.stringify(sysId)})) {`];
-  if (options.skipBusinessRules) {
-    lines.push('  gr.setWorkflow(false);');
-  }
-  if (options.keepSystemFields) {
-    lines.push('  gr.autoSysFields(false);');
-  }
-  lines.push(`  gr.setValue(${JSON.stringify(field)}, ${JSON.stringify(value)});`, '  gr.update();', '}');
-  return lines.join('\n');
-}
+const INSTANCE_PATH = /^\/(?![/\\])/;
 
 function isRecord(value: unknown): value is SnRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -162,10 +147,15 @@ function decodeBatchBody(body: string): unknown {
 }
 
 export function createSnApi(token: string): SnApi {
-  /** Sends one request and returns the parsed JSON body. Throws SnApiError on a failed status. */
-  async function send(path: string, init: RequestInit = {}): Promise<unknown> {
+  /** Sends one JSON request and returns the parsed JSON body. Throws SnApiError on a failed status. */
+  async function send(path: string, { method, body, signal }: RequestOptions = {}): Promise<unknown> {
+    if (!INSTANCE_PATH.test(path)) {
+      throw new SnApiError(400, 'Refusing to send a request outside this instance');
+    }
     const response = await fetch(path, {
-      ...init,
+      method,
+      body: body === undefined ? undefined : JSON.stringify(body),
+      signal,
       headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'X-UserToken': token },
       credentials: 'same-origin',
     });
@@ -176,8 +166,8 @@ export function createSnApi(token: string): SnApi {
   }
 
   /** Like send(), but returns the `result` of ServiceNow's { result: … } envelope. */
-  async function request(path: string, init?: RequestInit): Promise<unknown> {
-    const payload = await send(path, init);
+  async function request(path: string, options?: RequestOptions): Promise<unknown> {
+    const payload = await send(path, options);
     return isRecord(payload) ? payload.result : undefined;
   }
 
@@ -218,7 +208,7 @@ export function createSnApi(token: string): SnApi {
 
     const payload = await send('/api/now/v1/batch', {
       method: 'POST',
-      body: JSON.stringify({
+      body: {
         batch_request_id: 'snforge-find',
         rest_requests: tables.map((table, index) => ({
           id: String(index),
@@ -226,7 +216,7 @@ export function createSnApi(token: string): SnApi {
           url: recordsPath(table, bySysId(sysId, fields)),
           headers: [{ name: 'Accept', value: 'application/json' }],
         })),
-      }),
+      },
       signal,
     });
 
@@ -261,16 +251,12 @@ export function createSnApi(token: string): SnApi {
   ): Promise<unknown> {
     const params = new URLSearchParams({ sysparm_fields: field, sysparm_exclude_reference_link: 'true' });
     const path = `/api/now/table/${encodeURIComponent(table)}/${encodeURIComponent(sysId)}?${params}`;
-    const record = await request(path, { method: 'PATCH', body: JSON.stringify({ [field]: value }), signal });
+    const record = await request(path, { method: 'PATCH', body: { [field]: value }, signal });
     return isRecord(record) ? record[field] : undefined;
   }
 
-  /**
-   * Runs `script` through Scripts - Background and returns the raw HTML response. The
-   * output isn't parsed (its shape varies by version); callers confirm the effect some
-   * other way. Form-encoded with the CSRF token, so it is not a REST call and skips send().
-   */
-  async function runBackgroundScript(script: string, signal?: AbortSignal): Promise<string> {
+  /** Form-encoded with the CSRF token, so it is not a REST call and skips send(). */
+  async function runBackgroundScript(script: string, signal?: AbortSignal): Promise<void> {
     const response = await fetch(SCRIPT_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-UserToken': token },
@@ -281,35 +267,7 @@ export function createSnApi(token: string): SnApi {
     if (!response.ok) {
       throw new SnApiError(response.status, `Could not run the background script (${response.status}).`);
     }
-    return response.text();
   }
 
-  async function forceUpdateField(
-    table: string,
-    sysId: string,
-    field: string,
-    value: string,
-    options: ForceUpdateOptions = {},
-    signal?: AbortSignal,
-  ): Promise<unknown> {
-    // table and field are built into script source, so only accept the identifier shape.
-    if (!IDENTIFIER.test(table) || !IDENTIFIER.test(field) || !isSysId(sysId)) {
-      throw new SnApiError(400, 'Invalid table, field or sys_id');
-    }
-    await runBackgroundScript(buildUpdateScript(table, sysId, field, value, options), signal);
-    // The script's HTML output is unreliable; read the field back to see what stuck.
-    const record = await getRecord(table, sysId, { fields: [field], signal });
-    return record ? record[field] : undefined;
-  }
-
-  /** The same endpoint ServiceNow's own language picker calls, so it applies to the live session. */
-  async function setSessionLanguage(language: string, signal?: AbortSignal): Promise<void> {
-    await request('/api/now/ui/concoursepicker/language', {
-      method: 'PUT',
-      body: JSON.stringify({ current: language }),
-      signal,
-    });
-  }
-
-  return { getRecords, getRecord, findInTables, updateField, forceUpdateField, setSessionLanguage };
+  return { getRecords, getRecord, findInTables, updateField, request, runBackgroundScript };
 }

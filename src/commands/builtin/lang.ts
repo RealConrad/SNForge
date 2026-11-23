@@ -1,6 +1,12 @@
 import type { Command } from '../types';
 import { instanceUrl } from '../urls';
 
+/**
+ * The endpoint ServiceNow's own language picker calls, so the change applies to the live
+ * session. Internal, not a documented API.
+ */
+const LANGUAGE_ENDPOINT = '/api/now/ui/concoursepicker/language';
+
 export const lang: Command = {
   name: 'lang',
   aliases: ['language', 'locale'],
@@ -24,7 +30,7 @@ export const lang: Command = {
       throw new Error(`"${code}" is not a language on this instance. Available: ${codes.join(', ')}`);
     }
 
-    await ctx.api.setSessionLanguage(language, ctx.signal);
+    await ctx.api.request(LANGUAGE_ENDPOINT, { method: 'PUT', body: { current: language }, signal: ctx.signal });
     ctx.ui.close();
     ctx.navigate(instanceUrl(ctx.currentPath, ctx.urlOptions.origin)); // reload in the new language
   },
