@@ -1,8 +1,7 @@
 import { NOTICE_DURATION_MS } from '../../config';
 import { el } from '../../shared/dom';
-import { getSavedTheme } from '../../shared/theme';
-import themes from '../../shared/themes.css';
 import styles from './notice.css';
+import { mountShadow } from './shadow-host';
 
 let host: HTMLElement | undefined;
 let timer: number | undefined;
@@ -18,17 +17,7 @@ export function showNotice(message: string): void {
 
   const notice = el('div', 'notice', message);
   notice.setAttribute('role', 'status');
-  notice.dataset.theme = ''; // default theme until the saved one loads
-  void getSavedTheme().then((theme) => {
-    notice.dataset.theme = theme;
-  });
-
-  const style = el('style');
-  style.textContent = `${themes}\n${styles}`;
-
-  host = el('div');
-  host.attachShadow({ mode: 'closed' }).append(style, notice);
-  document.documentElement.append(host);
+  host = mountShadow(styles, notice);
 
   timer = window.setTimeout(() => host?.remove(), NOTICE_DURATION_MS);
 }

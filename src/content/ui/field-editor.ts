@@ -1,7 +1,6 @@
 import { el } from '../../shared/dom';
-import { getSavedTheme } from '../../shared/theme';
-import themes from '../../shared/themes.css';
 import styles from './field-editor.css';
+import { mountShadow } from './shadow-host';
 
 /** A checkbox under the value box, e.g. "Force update". `key` is returned when it's ticked. */
 export interface EditorToggle {
@@ -95,10 +94,6 @@ export function openFieldEditor({ title, value, toggles = [], save }: FieldEdito
   const panel = el('div', 'editor');
   panel.setAttribute('role', 'dialog');
   panel.setAttribute('aria-label', `Edit ${title}`);
-  panel.dataset.theme = ''; // default theme until the saved one loads
-  void getSavedTheme().then((theme) => {
-    panel.dataset.theme = theme;
-  });
   panel.append(el('div', 'title', title), input);
   if (toggles.length) {
     panel.append(toggleList);
@@ -121,17 +116,12 @@ export function openFieldEditor({ title, value, toggles = [], save }: FieldEdito
   // A press on the backdrop (the host) closes the editor; presses inside the panel don't reach it.
   panel.addEventListener('pointerdown', (event) => event.stopPropagation());
 
-  const style = el('style');
-  style.textContent = `${themes}\n${styles}`;
-
-  host = el('div');
+  host = mountShadow(styles, panel);
   host.addEventListener('pointerdown', (event) => {
     if (event.isTrusted) {
       closeFieldEditor();
     }
   });
-  host.attachShadow({ mode: 'closed' }).append(style, panel);
-  document.documentElement.append(host);
 
   window.focus(); // the click was inside the form's iframe
   input.focus();
