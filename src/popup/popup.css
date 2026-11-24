@@ -9,7 +9,7 @@ html {
 body {
   width: 320px;
   margin: 0;
-  background: var(--surface);
+  background: var(--panel, var(--surface));
   color: var(--text);
   font-family: Inter, "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
   font-size: 13px;
@@ -175,6 +175,55 @@ body {
 
 .theme-card:has(input:checked) .check {
   display: inline;
+}
+
+/* ---------- Easter egg: wanted level + the Vice theme card ---------- */
+
+.mark {
+  user-select: none;
+}
+
+.stars {
+  display: flex;
+  gap: 2px;
+  margin-left: auto;
+  color: var(--faint);
+  font-size: 14px;
+  line-height: 1;
+}
+
+.stars[hidden] {
+  display: none;
+}
+
+.stars .lit {
+  color: #ffd166;
+  text-shadow: 0 0 6px rgb(255 209 102 / 60%);
+}
+
+.stars.unlocked {
+  animation: stars-flash 260ms steps(2, end) 4;
+}
+
+@keyframes stars-flash {
+  50% {
+    opacity: 0.2;
+  }
+}
+
+.theme-card[data-theme="vice"] .preview {
+  background: var(--panel);
+}
+
+.theme-card.revealed {
+  animation: card-reveal 420ms ease-out;
+}
+
+@keyframes card-reveal {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
 }
 
 /* ---------- Shortcut ---------- */

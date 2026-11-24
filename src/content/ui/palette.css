@@ -30,7 +30,7 @@
   transform: translateX(-50%);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius);
-  background: var(--surface);
+  background: var(--panel, var(--surface));
   color: var(--text);
   box-shadow:
     0 0 0 1px rgb(0 0 0 / 35%),

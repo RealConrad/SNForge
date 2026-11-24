@@ -9,10 +9,28 @@ export const THEMES = {
   obsidian: 'Obsidian',
 } as const;
 
-export type ThemeId = keyof typeof THEMES;
+/**
+ * Easter-egg themes. They work like any other theme but the popup doesn't list them until
+ * they are unlocked there (see popup.ts), and nothing in the docs mentions them.
+ */
+export const SECRET_THEMES = {
+  vice: 'Vice',
+} as const;
+
+export type SecretThemeId = keyof typeof SECRET_THEMES;
+export type ThemeId = keyof typeof THEMES | SecretThemeId;
 
 export const DEFAULT_THEME: ThemeId = 'tokyo';
 export const THEME_STORAGE_KEY = 'snforge.theme';
+/** The secret themes this browser has unlocked (chrome.storage.local). */
+export const UNLOCKED_THEMES_STORAGE_KEY = 'snforge.unlockedThemes';
+
+/**
+ * Unlocking 'vice': click the logo in the popup this many times, each click within the
+ * cooldown of the last. Every click lights one star of a wanted level.
+ */
+export const WANTED_LEVEL = 6;
+export const WANTED_COOLDOWN_MS = 1_500;
 
 /** User documentation, opened by :help and the popup. */
 export const DOCS_URL = 'https://github.com/RealConrad/SNForge#readme';
