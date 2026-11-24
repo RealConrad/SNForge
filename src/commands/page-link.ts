@@ -19,7 +19,6 @@ export function pageLinkCommand(link: PageLink): Command {
     name: link.name,
     aliases: link.aliases,
     description: link.description,
-    usage: link.name,
     async run(ctx) {
       // A plain URL, not classicPageUrl(): these pages must not be wrapped in the classic frame.
       const url = instanceUrl(link.path, ctx.urlOptions.origin);

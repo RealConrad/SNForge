@@ -5,7 +5,6 @@ export const nav: Command = {
   name: 'nav',
   aliases: ['navbar', 'shell', 'polaris'],
   description: 'Reload the page with Next Experience navigation',
-  usage: 'nav',
   run(ctx) {
     if (isNextExperiencePath(ctx.currentPath)) {
       ctx.ui.print('Already a Next Experience page', 'info');

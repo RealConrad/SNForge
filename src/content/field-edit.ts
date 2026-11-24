@@ -7,11 +7,14 @@
  * on the server still apply. After a save the form is reloaded, which also ends the mode.
  */
 
+import { messageOf } from '../shared/errors';
+import { isIdentifier } from '../shared/identifiers';
 import { createSnApi, type SnApi } from '../shared/sn-api';
 import { isSysId } from '../shared/sys-id';
 import { grantedSession } from './access';
 import { collectDocuments } from './documents';
 import { forceUpdateField } from './force-update';
+import { FORM_ROW_SELECTOR, parseFormRowId } from './form-rows';
 import { openFieldEditor, type EditorToggle } from './ui/field-editor';
 import { showNotice } from './ui/notice';
 
@@ -34,9 +37,6 @@ interface FormField {
   name: string;
   sysId: string;
 }
-
-/** Form rows have the id "element.<table>.<field>". Dot-walked fields don't match: they belong to another record. */
-const FORM_ROW_ID = /^element\.([a-z0-9_]+)\.([a-z0-9_]+)$/;
 
 /** A visible control that ServiceNow rendered as not editable. */
 const READ_ONLY_CONTROL = ':is(input, textarea, select):is([readonly], [disabled]):not([type="hidden"])';
@@ -61,13 +61,14 @@ function isElement(target: EventTarget | null): target is Element {
 
 /** The read-only form field that was clicked, if the click was on one. */
 function readOnlyFieldAt(doc: Document, target: EventTarget | null): FormField | undefined {
-  const row = isElement(target) ? target.closest('[id^="element."]') : null;
-  const [, table, name] = FORM_ROW_ID.exec(row?.id ?? '') ?? [];
+  const row = isElement(target) ? target.closest(FORM_ROW_SELECTOR) : null;
+  const { table, field: name } = parseFormRowId(row?.id ?? '') ?? {};
   // Every classic form carries the sys_id of its record in this hidden input.
   const sysId = doc.querySelector<HTMLInputElement>('#sys_uniqueValue')?.value ?? '';
 
   // All of this is page data, so it is only used when it has the expected shape.
-  if (!row?.querySelector(READ_ONLY_CONTROL) || !table || !name || !isSysId(sysId)) {
+  // A dot-walked field is not an identifier: it belongs to another record and can't be edited here.
+  if (!row?.querySelector(READ_ONLY_CONTROL) || !table || !name || !isIdentifier(name) || !isSysId(sysId)) {
     return undefined;
   }
   return { table, name, sysId };
@@ -132,7 +133,7 @@ async function editField(doc: Document, field: FormField): Promise<void> {
       },
     });
   } catch (error) {
-    showNotice(error instanceof Error ? error.message : String(error));
+    showNotice(messageOf(error));
   }
 }
 

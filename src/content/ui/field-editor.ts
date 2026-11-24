@@ -1,4 +1,5 @@
 import { el } from '../../shared/dom';
+import { messageOf } from '../../shared/errors';
 import styles from './field-editor.css';
 import { mountShadow } from './shadow-host';
 
@@ -71,7 +72,7 @@ export function openFieldEditor({ title, value, toggles = [], save }: FieldEdito
       await save(input.value, checked);
       closeFieldEditor();
     } catch (reason) {
-      error.textContent = reason instanceof Error ? reason.message : String(reason);
+      error.textContent = messageOf(reason);
       error.hidden = false;
       saveButton.disabled = false;
     }

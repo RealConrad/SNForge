@@ -11,7 +11,6 @@ export const lang: Command = {
   name: 'lang',
   aliases: ['language', 'locale'],
   description: 'Change your session language, e.g. :lang de',
-  usage: 'lang <code>',
   async run(ctx, [code]) {
     if (!code) {
       throw new Error('Add a language code, for example :lang de');
@@ -23,7 +22,7 @@ export const lang: Command = {
       fields: ['id'],
       signal: ctx.signal,
     });
-    const codes = records.map((record) => String(record.id));
+    const codes = records.flatMap((record) => (typeof record.id === 'string' ? [record.id] : []));
 
     const language = code.toLowerCase();
     if (!codes.includes(language)) {

@@ -7,6 +7,7 @@
  * trusted user action (the editor's Save button).
  */
 
+import { isIdentifier } from '../shared/identifiers';
 import type { SnApi } from '../shared/sn-api';
 import { isSysId } from '../shared/sys-id';
 
@@ -17,9 +18,6 @@ export interface ForceUpdateOptions {
   /** autoSysFields(false): leave sys_updated_on / sys_updated_by as they are. */
   keepSystemFields?: boolean;
 }
-
-/** Table and field names in script source must be plain identifiers. */
-const IDENTIFIER = /^[a-z][a-z0-9_]*$/;
 
 /**
  * A GlideRecord update, as background-script source. Throws unless table and field are
@@ -34,7 +32,7 @@ export function buildUpdateScript(
   value: string,
   options: ForceUpdateOptions = {},
 ): string {
-  if (!IDENTIFIER.test(table) || !IDENTIFIER.test(field) || !isSysId(sysId)) {
+  if (!isIdentifier(table) || !isIdentifier(field) || !isSysId(sysId)) {
     throw new Error('Invalid table, field or sys_id');
   }
 

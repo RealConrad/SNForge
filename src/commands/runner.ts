@@ -1,3 +1,4 @@
+import { messageOf } from '../shared/errors';
 import { parseCommand } from './parser';
 import { findCommand } from './registry';
 import type { CommandContext } from './types';
@@ -13,7 +14,7 @@ export async function runSafely(ctx: CommandContext, task: () => Promise<void> |
     if (ctx.signal.aborted) {
       return;
     }
-    ctx.ui.print(error instanceof Error ? error.message : String(error), 'error');
+    ctx.ui.print(messageOf(error), 'error');
   }
 }
 

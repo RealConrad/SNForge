@@ -11,6 +11,7 @@
  *                               → new-record form; the query pre-fills field values
  */
 
+import { isIdentifier } from '../shared/identifiers';
 import { classicPageUrl, type UrlOptions } from './urls';
 
 export type TableView = 'list' | 'filter' | 'new';
@@ -30,9 +31,6 @@ const VIEW_SUFFIXES: Readonly<Record<string, TableView>> = {
   do: 'new',
 };
 
-/** ServiceNow table names: lowercase letters, digits and underscores. */
-export const TABLE_NAME =/^[a-z][a-z0-9_]*$/;
-
 /**
  * Parses palette input as a table shortcut. Returns null when the input isn't one
  * (empty, starts with ":", invalid table name or unknown suffix).
@@ -49,7 +47,7 @@ export function parseTableShortcut(input: string): TableShortcut | null {
   const [table = '', suffix = 'list', ...extra] = target.toLowerCase().split('.');
   const view = Object.hasOwn(VIEW_SUFFIXES, suffix) ? VIEW_SUFFIXES[suffix] : undefined;
 
-  if (!TABLE_NAME.test(table) || !view || extra.length > 0) {
+  if (!isIdentifier(table) || !view || extra.length > 0) {
     return null;
   }
 

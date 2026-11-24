@@ -8,7 +8,6 @@ export const log: Command = {
   name: 'log',
   aliases: ['logs', 'syslog'],
   description: "Open today's system log in a new tab",
-  usage: 'log',
   async run(ctx) {
     const params = new URLSearchParams({ sysparm_query: QUERY });
     await ctx.openTab(classicPageUrl(`/syslog_list.do?${params.toString()}`, ctx.urlOptions));

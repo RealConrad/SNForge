@@ -1,3 +1,4 @@
+import { ACCESS } from '../config';
 import {
   BRIDGE_REQUEST_EVENT,
   BRIDGE_RESPONSE_EVENT,
@@ -59,13 +60,18 @@ function getRoles(user: ServiceNowUser): string[] {
     roles = user.roles.split(',').map((role) => role.trim()).filter(Boolean);
   }
 
-  // Some UIs omit the role list; the role helper still knows about admin.
-  try {
-    if (!roles.includes('admin') && (user.hasRoleExactly?.('admin') ?? user.hasRole?.('admin'))) {
-      roles.push('admin');
+  // Some UIs omit the role list; the role helpers still know. Only the roles the gate
+  // asks for (config.ts) are checked.
+  for (const role of ACCESS.requiredRoles) {
+    try {
+      // hasRole() says yes to an admin for any role, so it is only trusted for admin itself.
+      const has = user.hasRoleExactly?.(role) ?? (role === 'admin' && user.hasRole?.(role));
+      if (has && !roles.includes(role)) {
+        roles.push(role);
+      }
+    } catch {
+      // Keep the explicit role list if the page's role helper throws.
     }
-  } catch {
-    // Keep the explicit role list if the page's role helper throws.
   }
 
   return roles;

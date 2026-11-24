@@ -125,10 +125,6 @@ kbd {
   display: none;
 }
 
-.output[data-kind="success"] {
-  color: var(--success);
-}
-
 .output[data-kind="error"] {
   color: var(--error);
 }

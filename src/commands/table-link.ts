@@ -1,4 +1,4 @@
-import { TABLE_NAME } from './table-shortcut';
+import { isIdentifier } from '../shared/identifiers';
 import type { Command } from './types';
 import { CLASSIC_TARGET_PREFIX, classicPageUrl } from './urls';
 
@@ -58,10 +58,9 @@ export function tableLinkCommand(link: TableLink): Command {
     name: link.name,
     aliases: link.aliases,
     description: link.description,
-    usage: `${link.name} [table]`,
     async run(ctx, [input]) {
       const table = input?.toLowerCase() ?? tableOfPage(ctx.currentPath);
-      if (!table || !TABLE_NAME.test(table)) {
+      if (!table || !isIdentifier(table)) {
         throw new Error(`Open a form or list first, or add a table, for example :${link.name} incident`);
       }
 

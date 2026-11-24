@@ -10,12 +10,10 @@
  */
 
 import { collectDocuments } from './documents';
+import { FORM_ROW_SELECTOR, parseFormRowId } from './form-rows';
 
 /** Marks the elements we add, so a second run can find and remove them. */
 const MARKER = 'data-snforge-field-name';
-
-/** Classic form rows have the id "element.<table>.<field>"; the capture is the field. */
-const FORM_ROW_ID = /^element\.[a-z0-9_]+\.(.+)$/;
 
 const PILL_STYLE = [
   'display: inline-block',
@@ -49,8 +47,8 @@ function createPill(doc: Document, name: string): HTMLElement {
 function addPills(doc: Document): number {
   let count = 0;
 
-  for (const formRow of doc.querySelectorAll('[id^="element."]')) {
-    const name = FORM_ROW_ID.exec(formRow.id)?.[1];
+  for (const formRow of doc.querySelectorAll(FORM_ROW_SELECTOR)) {
+    const name = parseFormRowId(formRow.id)?.field;
     if (name) {
       // The <label> is the label column itself, so the pill goes inside it, under the text.
       const label = formRow.querySelector('label') ?? formRow;

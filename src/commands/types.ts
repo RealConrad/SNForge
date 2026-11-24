@@ -1,7 +1,7 @@
 import type { SnApi } from '../shared/sn-api';
 import type { UrlOptions } from './urls';
 
-export type OutputKind = 'info' | 'error' | 'success';
+export type OutputKind = 'info' | 'error';
 
 /**
  * Everything a command may do. Commands never touch the DOM or `chrome.*` directly,
@@ -21,7 +21,6 @@ export interface CommandContext {
   signal: AbortSignal;
   ui: {
     print(line: string, kind?: OutputKind): void;
-    clear(): void;
     close(): void;
   };
   /** REST calls to the current instance, as the logged-in user. Pass `signal` along. */
@@ -59,6 +58,5 @@ export interface Command {
   name: string;
   aliases?: string[];
   description: string;
-  usage?: string;
   run(ctx: CommandContext, args: string[]): Promise<void> | void;
 }

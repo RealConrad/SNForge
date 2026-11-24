@@ -69,7 +69,7 @@ async function loadOtherBaseTables(
   });
 
   const names = records
-    .map((record) => String(record.name))
+    .flatMap((record) => (typeof record.name === 'string' ? [record.name] : []))
     .filter((name) => !alreadyAsked.includes(name))
     .filter((name) => !SYS_ID_SCAN_SKIP_PREFIXES.some((prefix) => name.startsWith(prefix)));
 
@@ -118,7 +118,6 @@ export const find: Command = {
   name: 'find',
   aliases: ['sysid', 'id'],
   description: 'Open the record with a sys_id, e.g. :find 6816f79cc0a8016401c5a33be04be441',
-  usage: 'find <sys_id>',
   async run(ctx, [input]) {
     const sysId = input?.toLowerCase() ?? '';
     if (!isSysId(sysId)) {

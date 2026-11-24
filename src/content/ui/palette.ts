@@ -58,7 +58,6 @@ function resetInput(): void {
 
 const commandUi: CommandContext['ui'] = {
   print: showOutput,
-  clear: clearOutput,
   close: () => closePalette(),
 };
 
@@ -92,9 +91,12 @@ function startRun(): CommandContext {
   return createCommandContext(commandUi, currentRun.signal);
 }
 
+/**
+ * The input stays as typed while the command runs: when it fails, the line is still
+ * there to correct. A command that succeeds closes the palette, and every open starts empty.
+ */
 function runCommand(input: string): void {
   clearOutput();
-  resetInput();
   void runCommandInput(input, startRun());
 }
 

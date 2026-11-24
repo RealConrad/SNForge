@@ -1,4 +1,5 @@
 import { registerCommand } from '../registry';
+import type { Command } from '../types';
 import { br } from './br';
 import { cs } from './cs';
 import { edit } from './edit';
@@ -11,17 +12,9 @@ import { names } from './names';
 import { nav } from './nav';
 import { st } from './st';
 
-/** Registers every built-in command. Add new commands here. */
+/** Every built-in command. Add new commands here. */
+const BUILTINS: readonly Command[] = [help, nav, fd, st, names, lang, find, br, cs, log, edit];
+
 export function registerBuiltins(): void {
-  registerCommand(help);
-  registerCommand(nav);
-  registerCommand(fd);
-  registerCommand(st);
-  registerCommand(names);
-  registerCommand(lang);
-  registerCommand(find);
-  registerCommand(br);
-  registerCommand(cs);
-  registerCommand(log);
-  registerCommand(edit);
+  BUILTINS.forEach(registerCommand);
 }
