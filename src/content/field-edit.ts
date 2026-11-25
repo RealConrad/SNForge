@@ -32,7 +32,7 @@ const TOGGLES: EditorToggle[] = [
 ];
 
 /** One field of the record a form shows. */
-interface FormField {
+export interface FormField {
   table: string;
   name: string;
   sysId: string;
@@ -119,7 +119,11 @@ async function saveValue(
   }
 }
 
-async function editField(doc: Document, field: FormField): Promise<void> {
+/**
+ * Opens the editor for one field of the saved record that the form in `doc` shows.
+ * Also used by the field details dialog (:names), outside field edit mode.
+ */
+export async function editField(doc: Document, field: FormField): Promise<void> {
   const api = createSnApi(grantedSession().token);
   try {
     const oldValue = await readValue(api, field);
