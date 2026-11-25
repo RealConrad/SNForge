@@ -26,6 +26,11 @@ export interface GetRecordsOptions {
   query?: string;
   fields?: string[];
   limit?: number;
+  /**
+   * "all": every field comes back as { value, display_value } instead of its plain
+   * stored value (sysparm_display_value=all).
+   */
+  display?: 'all';
   signal?: AbortSignal;
 }
 
@@ -44,7 +49,7 @@ export interface FoundRecord {
 
 export interface SnApi {
   getRecords(table: string, options?: GetRecordsOptions): Promise<SnRecord[]>;
-  getRecord(table: string, sysId: string, options?: Omit<GetRecordsOptions, 'query' | 'limit'>): Promise<SnRecord | null>;
+  getRecord(table: string, sysId: string, options?: Omit<GetRecordsOptions, 'query' | 'limit' | 'display'>): Promise<SnRecord | null>;
   /**
    * Looks for `sysId` in every one of `tables` with a single request (Batch API) and
    * returns the first table that has it, or null. Tables that don't exist or can't be
@@ -53,7 +58,7 @@ export interface SnApi {
   findInTables(
     tables: readonly string[],
     sysId: string,
-    options?: Omit<GetRecordsOptions, 'query' | 'limit'>,
+    options?: Omit<GetRecordsOptions, 'query' | 'limit' | 'display'>,
   ): Promise<FoundRecord | null>;
   /**
    * Writes one field of one record and returns the value the record has afterwards.
@@ -103,7 +108,7 @@ async function errorMessage(response: Response): Promise<string> {
 }
 
 /** Table API path + query for a read, e.g. "/api/now/table/incident?sysparm_query=…". */
-function recordsPath(table: string, { query, fields, limit }: Omit<GetRecordsOptions, 'signal'>): string {
+function recordsPath(table: string, { query, fields, limit, display }: Omit<GetRecordsOptions, 'signal'>): string {
   // Without the reference link a reference field is its plain sys_id, not { link, value }.
   const params = new URLSearchParams({ sysparm_no_count: 'true', sysparm_exclude_reference_link: 'true' });
   if (query) {
@@ -114,6 +119,9 @@ function recordsPath(table: string, { query, fields, limit }: Omit<GetRecordsOpt
   }
   if (limit !== undefined) {
     params.set('sysparm_limit', String(limit));
+  }
+  if (display) {
+    params.set('sysparm_display_value', display);
   }
   return `/api/now/table/${encodeURIComponent(table)}?${params}`;
 }
@@ -182,7 +190,7 @@ export function createSnApi(token: string): SnApi {
   async function getRecord(
     table: string,
     sysId: string,
-    options: Omit<GetRecordsOptions, 'query' | 'limit'> = {},
+    options: Omit<GetRecordsOptions, 'query' | 'limit' | 'display'> = {},
   ): Promise<SnRecord | null> {
     // sys_id goes into an encoded query, so only accept the real format.
     if (!isSysId(sysId)) {
@@ -200,7 +208,7 @@ export function createSnApi(token: string): SnApi {
   async function findInTables(
     tables: readonly string[],
     sysId: string,
-    { fields, signal }: Omit<GetRecordsOptions, 'query' | 'limit'> = {},
+    { fields, signal }: Omit<GetRecordsOptions, 'query' | 'limit' | 'display'> = {},
   ): Promise<FoundRecord | null> {
     if (!isSysId(sysId)) {
       return null;
