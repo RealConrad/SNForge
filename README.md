@@ -69,7 +69,7 @@ Commands start with `:`.
 | `:edit` (`:fieldedit`, `:unlock`) | Turn field edit on: triple-click a read-only field on a classic form to change its value. Run again to turn it off |
 | `:find <sys_id>` (`:sysid`, `:id`) | Open the record with that sys_id. Pasting a sys_id on its own does the same |
 | `:lang <code>` (`:language`, `:locale`) | Change your session language, e.g. `:lang de` for German or `:lang fr` for French. The code must be a language installed on the instance; a wrong code shows the available ones |
-| `:names` (`:fields`, `:tn`, `:technical`) | Show the technical name of every field under its label on a classic form or list; run again to hide |
+| `:names` (`:fields`, `:tn`, `:technical`) | Show the technical name of every field under its label on a classic form or list; run again to hide. On a form, click a name for the field's details: type, stored value, where it is defined, and buttons to copy it, change the value, or open its dictionary entry, choices, ACLs and history |
 
 ## Editing a read-only field
 
