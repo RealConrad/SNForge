@@ -102,8 +102,8 @@ export const MAX_SUGGESTIONS = 6;
  */
 export const SUGGESTED_INPUTS: readonly string[] = [
   ':fd',
-  ':st',
-  ':nav',
+  ':lang',
+  ':find',
   ':names',
   ':help',
 ];
